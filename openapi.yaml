@@ -1,0 +1,401 @@
+openapi: 3.0.3
+info:
+  title: ALEF-DELTA SACCO API
+  version: 1.0.0
+  description: Backend API for SACCO core banking and loan operations.
+servers:
+  - url: https://api.alef-delta.local/api
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginRequest:
+      type: object
+      required: [identifier, password]
+      properties:
+        actor:
+          type: string
+          enum: [STAFF, MEMBER]
+        identifier:
+          type: string
+          description: Username for staff or phone for members
+        password:
+          type: string
+          format: password
+    TokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    Member:
+      type: object
+      properties:
+        member_id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        membership_no:
+          type: string
+        phone_primary:
+          type: string
+        status:
+          type: string
+    Account:
+      type: object
+      properties:
+        account_id:
+          type: string
+        member_id:
+          type: string
+        product_code:
+          type: string
+        balance:
+          type: number
+          format: double
+        lien_amount:
+          type: number
+          format: double
+        version:
+          type: integer
+    Transaction:
+      type: object
+      properties:
+        txn_id:
+          type: string
+        account_id:
+          type: string
+        txn_type:
+          type: string
+          enum: [DEPOSIT, WITHDRAWAL]
+        amount:
+          type: number
+          format: double
+        balance_after:
+          type: number
+        reference:
+          type: string
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate staff or members
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              actor: STAFF
+              identifier: teller.one
+              password: Password123!
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: New access token
+  /auth/request-otp:
+    post:
+      summary: Request OTP for member password reset
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: OTP issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  otp_request_id:
+                    type: string
+  /auth/verify-otp:
+    post:
+      summary: Verify OTP and reset password
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp_request_id, code, new_password]
+              properties:
+                otp_request_id:
+                  type: string
+                code:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        '200':
+          description: Password reset
+  /members:
+    get:
+      security:
+        - bearerAuth: []
+      summary: List members
+      tags: [Members]
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Members page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Member'
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create member profile
+      tags: [Members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Member'
+      responses:
+        '201':
+          description: Member created
+  /members/{memberId}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Fetch single member
+      tags: [Members]
+      parameters:
+        - in: path
+          name: memberId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Member details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+  /accounts/{accountId}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Retrieve account
+      tags: [Accounts]
+      parameters:
+        - in: path
+          name: accountId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+  /transactions/deposit:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Post deposit
+      tags: [Transactions]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [account_id, amount]
+              properties:
+                account_id:
+                  type: string
+                amount:
+                  type: number
+                reference:
+                  type: string
+                receipt:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Deposit accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transaction:
+                    $ref: '#/components/schemas/Transaction'
+  /transactions/withdraw:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Withdraw funds
+      tags: [Transactions]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [account_id, amount]
+              properties:
+                account_id:
+                  type: string
+                amount:
+                  type: number
+                reference:
+                  type: string
+      responses:
+        '201':
+          description: Withdrawal accepted
+  /loans:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create loan application
+      tags: [Loans]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [member_id, product_code, applied_amount, term_months]
+      responses:
+        '201':
+          description: Loan request created
+  /loans/{loanId}/check-eligibility:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Re-run gatekeeper
+      tags: [Loans]
+      parameters:
+        - in: path
+          name: loanId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Eligibility snapshot
+  /loans/{loanId}/approve:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Approve loan
+      tags: [Loans]
+      parameters:
+        - in: path
+          name: loanId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approved_amount, term_months, interest_rate]
+      responses:
+        '200':
+          description: Loan approved
+  /reports/summary:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Portfolio overview
+      tags: [Reports]
+      responses:
+        '200':
+          description: Summary metrics
+  /notifications/send-notification:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Forward a message to Telegram bot
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_id, message]
+              properties:
+                chat_id:
+                  type: string
+                message:
+                  type: string
+                attachments:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Notification forwarded
