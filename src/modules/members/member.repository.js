@@ -13,10 +13,53 @@ export async function findMemberById(memberId) {
 export async function listMembers({ search, status, limit = 25, offset = 0 }) {
   const where = [];
   const params = [];
+  
   if (search) {
-    where.push('(first_name LIKE ? OR last_name LIKE ? OR membership_no LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    const searchTerm = `%${search}%`;
+    const searchConditions = [];
+    const trimmedSearch = search.trim();
+    
+    // Search in names (first, middle, last)
+    searchConditions.push('(first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?)');
+    params.push(searchTerm, searchTerm, searchTerm);
+    
+    // Handle membership number search with or without MEM- prefix
+    // Can search: MEM-17236872374, Mem-17236872374, or just 17236872374
+    const memNoMatch = trimmedSearch.match(/^(?:mem-|MEM-)?(\d+)$/i);
+    if (memNoMatch) {
+      const memNumber = memNoMatch[1];
+      // Search for both formats: MEM-{number} and just {number}
+      searchConditions.push('(membership_no LIKE ? OR membership_no LIKE ? OR membership_no = ? OR membership_no = ?)');
+      params.push(`%MEM-${memNumber}%`, `%Mem-${memNumber}%`, `MEM-${memNumber}`, memNumber);
+    } else {
+      // Fallback: search membership_no with LIKE for partial matches
+      searchConditions.push('membership_no LIKE ?');
+      params.push(searchTerm);
+    }
+    
+    // Handle phone number search with different formats
+    // Phone can be: +251965500539, 965500539, 0965500539, or 65500539
+    // If search looks like a phone number (contains digits), also search in phone_primary
+    if (/[\d+]/.test(trimmedSearch)) {
+      // Remove common prefixes and search for the core number
+      let phonePattern = trimmedSearch.replace(/^\+251/, '').replace(/^0/, '').replace(/^251/, '');
+      
+      // If we have a phone pattern, search for it in different formats
+      if (phonePattern && /^\d+$/.test(phonePattern)) {
+        // Search for: +251{pattern}, 0{pattern}, {pattern}, or exact match
+        searchConditions.push('(phone_primary LIKE ? OR phone_primary LIKE ? OR phone_primary LIKE ? OR phone_primary = ?)');
+        params.push(`%+251${phonePattern}%`, `%0${phonePattern}%`, `%${phonePattern}%`, phonePattern);
+      } else {
+        // Fallback: just search with LIKE
+        searchConditions.push('phone_primary LIKE ?');
+        params.push(searchTerm);
+      }
+    }
+    
+    // Combine all search conditions with OR
+    where.push(`(${searchConditions.join(' OR ')})`);
   }
+  
   if (status) {
     where.push('status = ?');
     params.push(status);
@@ -87,14 +130,57 @@ export async function deleteMember(memberId) {
 export async function countMembers(filters) {
   const where = [];
   const params = [];
+  
   if (filters.search) {
-    where.push('(first_name LIKE ? OR last_name LIKE ? OR membership_no LIKE ?)');
-    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+    const searchTerm = `%${filters.search}%`;
+    const searchConditions = [];
+    const trimmedSearch = filters.search.trim();
+    
+    // Search in names (first, middle, last)
+    searchConditions.push('(first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ?)');
+    params.push(searchTerm, searchTerm, searchTerm);
+    
+    // Handle membership number search with or without MEM- prefix
+    // Can search: MEM-17236872374, Mem-17236872374, or just 17236872374
+    const memNoMatch = trimmedSearch.match(/^(?:mem-|MEM-)?(\d+)$/i);
+    if (memNoMatch) {
+      const memNumber = memNoMatch[1];
+      // Search for both formats: MEM-{number} and just {number}
+      searchConditions.push('(membership_no LIKE ? OR membership_no LIKE ? OR membership_no = ? OR membership_no = ?)');
+      params.push(`%MEM-${memNumber}%`, `%Mem-${memNumber}%`, `MEM-${memNumber}`, memNumber);
+    } else {
+      // Fallback: search membership_no with LIKE for partial matches
+      searchConditions.push('membership_no LIKE ?');
+      params.push(searchTerm);
+    }
+    
+    // Handle phone number search with different formats
+    const phoneSearch = trimmedSearch;
+    if (/[\d+]/.test(phoneSearch)) {
+      // Remove common prefixes and search for the core number
+      let phonePattern = phoneSearch.replace(/^\+251/, '').replace(/^0/, '').replace(/^251/, '');
+      
+      // If we have a phone pattern, search for it in different formats
+      if (phonePattern && /^\d+$/.test(phonePattern)) {
+        // Search for: +251{pattern}, 0{pattern}, {pattern}, or exact match
+        searchConditions.push('(phone_primary LIKE ? OR phone_primary LIKE ? OR phone_primary LIKE ? OR phone_primary = ?)');
+        params.push(`%+251${phonePattern}%`, `%0${phonePattern}%`, `%${phonePattern}%`, phonePattern);
+      } else {
+        // Fallback: just search with LIKE
+        searchConditions.push('phone_primary LIKE ?');
+        params.push(searchTerm);
+      }
+    }
+    
+    // Combine all search conditions with OR
+    where.push(`(${searchConditions.join(' OR ')})`);
   }
+  
   if (filters.status) {
     where.push('status = ?');
     params.push(filters.status);
   }
+  
   const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const rows = await query(`SELECT COUNT(*) as total FROM members ${whereClause}`, params);
   return rows[0].total;
