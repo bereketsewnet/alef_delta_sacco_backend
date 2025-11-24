@@ -8,7 +8,10 @@ import {
   handleCreateMember,
   handleUpdateMember,
   handleUpload,
-  handleAddBeneficiary
+  handleAddBeneficiary,
+  handleDeleteMember,
+  handleActivateMember,
+  handleSuspendMember
 } from './member.controller.js';
 
 const router = Router();
@@ -31,8 +34,13 @@ router.get(
   handleGetMember
 );
 
-router.post('/', authenticate, requireRoles('ADMIN', 'MANAGER'), handleCreateMember);
+router.post('/', authenticate, requireRoles('ADMIN', 'TELLER', 'MANAGER'), handleCreateMember);
 router.put('/:id', authenticate, requireRoles('ADMIN', 'MANAGER'), handleUpdateMember);
+router.delete('/:id', authenticate, requireRoles('ADMIN'), handleDeleteMember);
+
+// Manager-specific actions
+router.post('/:id/activate', authenticate, requireRoles('ADMIN', 'MANAGER'), handleActivateMember);
+router.post('/:id/suspend', authenticate, requireRoles('ADMIN', 'MANAGER'), handleSuspendMember);
 
 router.post(
   '/:id/upload',
@@ -41,7 +49,9 @@ router.post(
   attachUploadContext('members', (req) => req.params.id),
   upload.fields([
     { name: 'profile_photo', maxCount: 1 },
-    { name: 'id_card', maxCount: 1 }
+    { name: 'id_card_front', maxCount: 1 },
+    { name: 'id_card_back', maxCount: 1 },
+    { name: 'id_card', maxCount: 1 } // Legacy support
   ]),
   handleUpload
 );

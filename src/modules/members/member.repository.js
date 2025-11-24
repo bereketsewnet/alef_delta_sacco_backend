@@ -80,3 +80,23 @@ export async function updateMemberPassword(memberId, passwordHash) {
   );
 }
 
+export async function deleteMember(memberId) {
+  await execute('DELETE FROM members WHERE member_id = ?', [memberId]);
+}
+
+export async function countMembers(filters) {
+  const where = [];
+  const params = [];
+  if (filters.search) {
+    where.push('(first_name LIKE ? OR last_name LIKE ? OR membership_no LIKE ?)');
+    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+  if (filters.status) {
+    where.push('status = ?');
+    params.push(filters.status);
+  }
+  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const rows = await query(`SELECT COUNT(*) as total FROM members ${whereClause}`, params);
+  return rows[0].total;
+}
+

@@ -36,7 +36,13 @@ backend/
 4. Start the API server:
    ```bash
    npm start
+   # or for development with auto-reload:
+   npm run dev
    ```
+
+5. Access Swagger UI documentation:
+   - Open your browser to: `http://localhost:4000/api-docs`
+   - The interactive API documentation allows you to test endpoints directly
 
 ### npm scripts
 
@@ -66,11 +72,11 @@ Scripts rely on the same `.env` configuration used by the runtime server.
 - **Authentication** – staff (username/password) and members (phone/password) with JWT access + refresh tokens, rate-limited login endpoints, OTP-based member password reset, admin-only reset endpoint.
 - **Role-based access control** – middleware ensures only specific staff roles can access money movement, approval, or reporting endpoints.
 - **Members & KYC** – CRUD APIs, profile + ID uploads stored under `uploads/members/{memberId}`. Beneficiaries support front/back ID uploads.
-- **Accounts & Transactions** – Deposit/withdraw endpoints enforce idempotency via `Idempotency-Key`, run inside DB transactions, and use optimistic locking to protect concurrency. Receipt uploads stored under `uploads/transactions/{account}`.
+- **Accounts & Transactions** – Full CRUD for accounts (create, list, get, update, close, freeze/unfreeze). Deposit/withdraw endpoints enforce idempotency via `Idempotency-Key`, run inside DB transactions, and use optimistic locking to protect concurrency. Receipt uploads stored under `uploads/transactions/{account}`.
 - **Loans** – Gatekeeper + affordability checks, 1/3 rule, schedule preview for flat and declining interest products, guarantor and collateral uploads, lien management when approving.
 - **Audit + Logging** – All approval and money-moving actions write to `audit_logs` and request logs flow through Winston.
 - **Notifications** – `/notifications/send-notification` forwards messages to the aiogram bot webhook with bot token authentication.
-- **OpenAPI + Postman** – `openapi.yaml` documents the surface area and `postman_collection.json` provides ready-made flows.
+- **OpenAPI + Swagger UI + Postman** – Interactive API documentation available at `/api-docs` (Swagger UI), `openapi.yaml` for the spec, and `postman_collection.json` for Postman imports.
 
 ## Testing
 

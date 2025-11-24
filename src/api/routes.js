@@ -8,6 +8,9 @@ import loanRoutes from '../modules/loans/loan.routes.js';
 import notificationRoutes from '../modules/notifications/notification.routes.js';
 import reportRoutes from '../modules/reports/report.routes.js';
 import adminRoutes from '../modules/admin/admin.routes.js';
+import collateralRoutes from '../modules/collateral/collateral.routes.js';
+import guarantorRoutes from '../modules/guarantors/guarantor.routes.js';
+import clientRoutes from '../modules/client/client.routes.js';
 import { healthCheck } from '../core/db.js';
 
 const router = Router();
@@ -17,15 +20,21 @@ router.get('/health', async (req, res) => {
   res.json({ status: healthy ? 'ok' : 'degraded' });
 });
 
+// Internal staff endpoints
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/members', memberRoutes);
 router.use('/accounts', accountRoutes);
 router.use('/transactions', transactionRoutes);
 router.use('/loans', loanRoutes);
+router.use('/collateral', collateralRoutes);
+router.use('/guarantors', guarantorRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/reports', reportRoutes);
 router.use('/admin', adminRoutes);
+
+// Client-facing endpoints (Telegram Mini App)
+router.use('/client', clientRoutes);
 
 export default router;
 
