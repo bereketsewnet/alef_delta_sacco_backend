@@ -9,7 +9,8 @@ import {
   handleUpdateAccount,
   handleCloseAccount,
   handleFreezeAccount,
-  handleUnfreezeAccount
+  handleUnfreezeAccount,
+  handleDeleteAccount
 } from './account.controller.js';
 
 const router = Router();
@@ -38,5 +39,8 @@ router.post('/:id/freeze', authenticate, requireRoles('ADMIN', 'MANAGER'), handl
 
 // Unfreeze account (Manager/Admin)
 router.post('/:id/unfreeze', authenticate, requireRoles('ADMIN', 'MANAGER'), handleUnfreezeAccount);
+
+// Delete account (Admin only, must be closed with zero balance and no transactions)
+router.delete('/:id', authenticate, requireRoles('ADMIN'), handleDeleteAccount);
 
 export default router;

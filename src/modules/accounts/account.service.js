@@ -9,7 +9,7 @@ import {
   updateAccount as updateAccountRepo
 } from './account.repository.js';
 import { findMemberById } from '../members/member.repository.js';
-import { query } from '../../core/db.js';
+import { query, execute } from '../../core/db.js';
 
 export async function getAccounts(filters) {
   const data = await listAccounts(filters);
@@ -89,12 +89,31 @@ export async function updateAccount(accountId, payload) {
     throw httpError(404, 'Account not found');
   }
   
-  // Validate status transitions
-  if (payload.status) {
-    if (account.status === 'CLOSED') {
-      throw httpError(400, 'Cannot modify closed account');
+  // Cannot modify closed accounts
+  if (account.status === 'CLOSED') {
+    throw httpError(400, 'Cannot modify closed account');
+  }
+  
+  // Validate product_code change
+  if (payload.product_code && payload.product_code !== account.product_code) {
+    const balance = Number(account.balance);
+    if (balance !== 0) {
+      throw httpError(400, 'Cannot change product code for account with non-zero balance');
     }
     
+    // Check if member already has an account with the new product code
+    const existing = await query(
+      'SELECT * FROM accounts WHERE member_id = ? AND product_code = ? AND account_id != ? AND status != ?',
+      [account.member_id, payload.product_code, accountId, 'CLOSED']
+    );
+    
+    if (existing.length > 0) {
+      throw httpError(400, 'Member already has an active account with this product');
+    }
+  }
+  
+  // Validate status transitions
+  if (payload.status) {
     if (payload.status === 'CLOSED' && Number(account.balance) !== 0) {
       throw httpError(400, 'Cannot close account with non-zero balance');
     }
@@ -154,6 +173,40 @@ export async function unfreezeAccount(accountId) {
   
   await updateAccountRepo(accountId, { status: 'ACTIVE' });
   return getAccountById(accountId);
+}
+
+export async function deleteAccount(accountId) {
+  const account = await findAccountById(accountId);
+  if (!account) {
+    throw httpError(404, 'Account not found');
+  }
+  
+  if (account.status !== 'CLOSED') {
+    throw httpError(400, 'Account must be closed before deletion');
+  }
+  
+  const balance = Number(account.balance);
+  if (balance !== 0) {
+    throw httpError(400, `Cannot delete account with non-zero balance. Current balance: ${balance}`);
+  }
+  
+  const lien = Number(account.lien_amount || 0);
+  if (lien > 0) {
+    throw httpError(400, `Cannot delete account with active lien. Lien amount: ${lien}`);
+  }
+  
+  // Check if account has any transactions
+  const transactions = await query(
+    'SELECT COUNT(*) as count FROM transactions WHERE account_id = ?',
+    [accountId]
+  );
+  
+  if (transactions[0].count > 0) {
+    throw httpError(400, 'Cannot delete account with transaction history. Account must remain for audit purposes.');
+  }
+  
+  await execute('DELETE FROM accounts WHERE account_id = ?', [accountId]);
+  return { success: true, message: 'Account deleted successfully' };
 }
 
 export async function updateAccountBalance(accountId, expectedVersion, updates, connection) {

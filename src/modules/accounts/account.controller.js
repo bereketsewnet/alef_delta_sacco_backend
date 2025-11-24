@@ -8,7 +8,8 @@ import {
   updateAccount,
   closeAccount,
   freezeAccount,
-  unfreezeAccount
+  unfreezeAccount,
+  deleteAccount
 } from './account.service.js';
 
 function validate(schema, payload) {
@@ -97,6 +98,15 @@ export async function handleUnfreezeAccount(req, res, next) {
   try {
     const account = await unfreezeAccount(req.params.id);
     res.json(account);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleDeleteAccount(req, res, next) {
+  try {
+    const result = await deleteAccount(req.params.id);
+    res.json(result);
   } catch (error) {
     next(error);
   }

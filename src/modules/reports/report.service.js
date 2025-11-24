@@ -58,4 +58,94 @@ export async function getTransactionStats(startDate, endDate) {
   }));
 }
 
+export async function getTellerDashboardStats(userId) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // Today's deposits
+  const [todayDeposits] = await query(
+    `SELECT 
+      SUM(amount) as total,
+      COUNT(*) as count
+     FROM transactions 
+     WHERE txn_type = 'DEPOSIT' 
+     AND DATE(created_at) = CURDATE()
+     AND performed_by = ?`,
+    [userId]
+  );
+
+  // Today's withdrawals
+  const [todayWithdrawals] = await query(
+    `SELECT 
+      SUM(amount) as total,
+      COUNT(*) as count
+     FROM transactions 
+     WHERE txn_type = 'WITHDRAWAL' 
+     AND DATE(created_at) = CURDATE()
+     AND performed_by = ?`,
+    [userId]
+  );
+
+  // Cash drawer (net: deposits - withdrawals for today)
+  const netCash = Number(todayDeposits.total || 0) - Number(todayWithdrawals.total || 0);
+
+  // Pending receipts (transactions without receipt photo uploaded today)
+  const [pendingReceipts] = await query(
+    `SELECT COUNT(*) as count
+     FROM transactions 
+     WHERE DATE(created_at) = CURDATE()
+     AND performed_by = ?
+     AND (receipt_photo_url IS NULL OR receipt_photo_url = '')`,
+    [userId]
+  );
+
+  // Recent transactions (last 5 for this teller)
+  const recentTransactions = await query(
+    `SELECT 
+      t.txn_id,
+      t.txn_type,
+      t.amount,
+      t.reference,
+      t.created_at,
+      t.receipt_photo_url,
+      a.product_code,
+      m.first_name,
+      m.last_name,
+      m.membership_no
+     FROM transactions t
+     JOIN accounts a ON t.account_id = a.account_id
+     JOIN members m ON a.member_id = m.member_id
+     WHERE t.performed_by = ?
+     ORDER BY t.created_at DESC
+     LIMIT 5`,
+    [userId]
+  );
+
+  return {
+    today_deposits: {
+      total: Number(todayDeposits.total || 0),
+      count: Number(todayDeposits.count || 0)
+    },
+    today_withdrawals: {
+      total: Number(todayWithdrawals.total || 0),
+      count: Number(todayWithdrawals.count || 0)
+    },
+    cash_drawer: netCash,
+    pending_receipts: Number(pendingReceipts.count || 0),
+    recent_transactions: recentTransactions.map(t => ({
+      txn_id: t.txn_id,
+      txn_type: t.txn_type,
+      amount: Number(t.amount),
+      reference: t.reference,
+      created_at: t.created_at,
+      receipt_photo_url: t.receipt_photo_url,
+      product_code: t.product_code,
+      member_name: `${t.first_name} ${t.last_name}`,
+      membership_no: t.membership_no
+    }))
+  };
+}
+
 
