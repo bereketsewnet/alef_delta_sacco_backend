@@ -7,6 +7,8 @@ export const createAccountSchema = Joi.object({
 });
 
 export const updateAccountSchema = Joi.object({
+  product_code: Joi.string().valid('SAV_COMPULSORY', 'SAV_VOLUNTARY', 'SAV_FIXED', 'SHR_CAP'),
+  currency: Joi.string().valid('ETB', 'USD'),
   status: Joi.string().valid('ACTIVE', 'FROZEN', 'CLOSED'),
   lien_amount: Joi.number().min(0)
 }).min(1);
