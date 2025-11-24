@@ -10,6 +10,7 @@ import reportRoutes from '../modules/reports/report.routes.js';
 import adminRoutes from '../modules/admin/admin.routes.js';
 import collateralRoutes from '../modules/collateral/collateral.routes.js';
 import guarantorRoutes from '../modules/guarantors/guarantor.routes.js';
+import beneficiaryRoutes from '../modules/beneficiaries/beneficiary.routes.js';
 import clientRoutes from '../modules/client/client.routes.js';
 import { healthCheck } from '../core/db.js';
 
@@ -29,6 +30,7 @@ router.use('/transactions', transactionRoutes);
 router.use('/loans', loanRoutes);
 router.use('/collateral', collateralRoutes);
 router.use('/guarantors', guarantorRoutes);
+router.use('/beneficiaries', beneficiaryRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/reports', reportRoutes);
 router.use('/admin', adminRoutes);
