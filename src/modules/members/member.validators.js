@@ -24,7 +24,7 @@ export const updateMemberSchema = createMemberSchema.fork(
   Object.keys(createMemberSchema.describe().keys),
   (schema) => schema.optional()
 ).keys({
-  password: Joi.forbidden()
+  password: Joi.string().min(6).optional().allow(null, '') // Allow password update but make it optional
 });
 
 export const beneficiarySchema = Joi.object({

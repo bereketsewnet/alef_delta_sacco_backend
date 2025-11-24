@@ -6,6 +6,7 @@ import {
   findMemberById,
   createMember,
   updateMember,
+  updateMemberPassword,
   deleteMember,
   countMembers
 } from './member.repository.js';
@@ -89,6 +90,15 @@ export async function updateExistingMember(memberId, payload) {
   if (!member) {
     throw httpError(404, 'Member not found');
   }
+  
+  // Handle password update separately if provided
+  if (payload.password && payload.password.trim() !== '') {
+    const passwordHash = await hashPassword(payload.password);
+    await updateMemberPassword(memberId, passwordHash);
+    // Remove password from payload to avoid including it in regular update
+    delete payload.password;
+  }
+  
   // Transform frontend values to database format
   const transformedPayload = transformMemberPayload(payload);
   await updateMember(memberId, transformedPayload);

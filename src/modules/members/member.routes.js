@@ -35,7 +35,7 @@ router.get(
 );
 
 router.post('/', authenticate, requireRoles('ADMIN', 'TELLER', 'MANAGER'), handleCreateMember);
-router.put('/:id', authenticate, requireRoles('ADMIN', 'MANAGER'), handleUpdateMember);
+router.put('/:id', authenticate, requireRoles('ADMIN', 'TELLER', 'MANAGER'), handleUpdateMember);
 router.delete('/:id', authenticate, requireRoles('ADMIN'), handleDeleteMember);
 
 // Manager-specific actions
