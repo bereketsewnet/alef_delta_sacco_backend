@@ -25,8 +25,23 @@ const storage = multer.diskStorage({
 });
 
 function fileFilter(_req, file, cb) {
-  if (!config.uploads.allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error('Unsupported file type'));
+  const mimeType = file.mimetype.toLowerCase();
+  
+  // Normalize image/jpg to image/jpeg for comparison
+  const normalizedMime = mimeType.replace('image/jpg', 'image/jpeg');
+  
+  // Also check file extension as fallback
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+  
+  // Check if MIME type is allowed (after normalization) OR extension is allowed
+  const isMimeAllowed = config.uploads.allowedMimeTypes.some(allowed => {
+    const normalizedAllowed = allowed.toLowerCase().replace('image/jpg', 'image/jpeg');
+    return normalizedMime === normalizedAllowed;
+  });
+  
+  if (!isMimeAllowed && !allowedExts.includes(ext)) {
+    return cb(new Error(`Unsupported file type: ${file.mimetype}. Allowed: ${config.uploads.allowedMimeTypes.join(', ')}`));
   }
   return cb(null, true);
 }

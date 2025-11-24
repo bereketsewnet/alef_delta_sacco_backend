@@ -5,7 +5,8 @@ import {
   handleRefresh,
   handleRequestOtp,
   handleVerifyOtp,
-  handleChangePassword
+  handleChangePassword,
+  handleMe
 } from './auth.controller.js';
 
 const router = Router();
@@ -15,6 +16,7 @@ router.post('/refresh', handleRefresh);
 router.post('/request-otp', handleRequestOtp);
 router.post('/verify-otp', handleVerifyOtp);
 router.post('/change-password', authenticate, handleChangePassword);
+router.get('/me', authenticate, handleMe);
 
 export default router;
 

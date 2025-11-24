@@ -31,7 +31,14 @@ const config = {
   uploads: {
     root: path.resolve(rootDir, process.env.UPLOADS_PATH || './uploads'),
     maxFileSize: 5 * 1024 * 1024,
-    allowedMimeTypes: ['image/jpeg', 'image/png', 'application/pdf']
+    allowedMimeTypes: [
+      'image/jpeg',
+      'image/jpg', // Some browsers send this instead of image/jpeg
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf'
+    ]
   },
   otp: {
     expirationMinutes: Number(process.env.OTP_EXP_MIN || 10)

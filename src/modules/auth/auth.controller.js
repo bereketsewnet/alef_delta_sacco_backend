@@ -4,7 +4,8 @@ import {
   refreshToken,
   requestOtp,
   verifyOtp,
-  changePassword
+  changePassword,
+  getCurrentUser
 } from './auth.service.js';
 import {
   loginSchema,
@@ -24,6 +25,7 @@ function validate(schema, payload) {
 
 export async function handleLogin(req, res, next) {
   try {
+    console.log('Login attempt:', { ...req.body, password: '***' });
     const payload = validate(loginSchema, req.body);
     const result = await login(payload);
     res.json(result);
@@ -79,3 +81,21 @@ export async function handleChangePassword(req, res, next) {
   }
 }
 
+export async function handleMe(req, res, next) {
+  try {
+    const subjectType = req.user?.subjectType || 'STAFF';
+    // req.user is set by resolveSubject() which returns userId (for STAFF) or memberId (for MEMBER)
+    const userId = req.user.userId || req.user.memberId;
+    if (!userId) {
+      throw httpError(401, 'Invalid user context');
+    }
+    const result = await getCurrentUser({
+      userId,
+      role: req.user.role,
+      subjectType
+    });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}

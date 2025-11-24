@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid';
 import dayjs from 'dayjs';
-import { findUserByUsername, findUserById, updateUserPassword } from '../users/user.repository.js';
+import { findUserByUsername, findUserById, updateUserPassword, findUserByIdentifier } from '../users/user.repository.js';
 import {
   findMemberByPhone,
   findMemberById,
@@ -24,12 +24,20 @@ export async function login({ actor = 'STAFF', identifier, password }) {
   }
 
   if (normalizedActor === 'STAFF') {
-    const user = await findUserByUsername(identifier);
+    // Support login by username or email
+    const user = await findUserByIdentifier(identifier);
     if (!user) {
+      console.log(`Login failed: User not found for identifier '${identifier}'`);
       throw httpError(401, 'Invalid credentials');
+    }
+    // Check if user is active
+    if (user.status !== 'ACTIVE') {
+      console.log(`Login failed: User '${identifier}' is not ACTIVE (status: ${user.status})`);
+      throw httpError(403, 'Account is disabled');
     }
     const match = await comparePassword(password, user.password_hash);
     if (!match) {
+      console.log(`Login failed: Password mismatch for user '${identifier}'`);
       throw httpError(401, 'Invalid credentials');
     }
     const payload = { sub: user.user_id, role: user.role, subjectType: 'STAFF' };
@@ -44,6 +52,7 @@ export async function login({ actor = 'STAFF', identifier, password }) {
       }
     };
   }
+
 
   const member = await findMemberByPhone(identifier);
   if (!member) {
@@ -178,5 +187,35 @@ export async function changePassword({ subjectType, subjectId, currentPassword, 
   const hash = await hashPassword(newPassword);
   await updateMemberPassword(subjectId, hash);
   return { success: true };
+}
+
+export async function getCurrentUser({ userId, role, subjectType }) {
+  if (subjectType === 'STAFF') {
+    const user = await findUserById(userId);
+    if (!user) throw httpError(404, 'User not found');
+    // Return safe user object
+    return {
+      user_id: user.user_id,
+      username: user.username,
+      role: user.role,
+      email: user.email,
+      phone: user.phone,
+      full_name: user.username // mapping for frontend
+    };
+  }
+  
+  const member = await findMemberById(userId);
+  if (!member) throw httpError(404, 'Member not found');
+  
+  return {
+    member_id: member.member_id,
+    membership_no: member.membership_no,
+    first_name: member.first_name,
+    last_name: member.last_name,
+    email: member.email,
+    phone: member.phone_primary,
+    full_name: `${member.first_name} ${member.last_name}`,
+    role: 'MEMBER' // Explicit role for frontend logic
+  };
 }
 

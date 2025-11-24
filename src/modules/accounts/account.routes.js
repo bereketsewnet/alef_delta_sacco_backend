@@ -1,17 +1,42 @@
 import { Router } from 'express';
 import { authenticate } from '../../core/middleware/auth.js';
 import { requireRoles } from '../../core/middleware/roles.js';
-import { handleGetAccount, handleGetMemberAccounts } from './account.controller.js';
+import {
+  handleListAccounts,
+  handleGetAccount,
+  handleGetMemberAccounts,
+  handleCreateAccount,
+  handleUpdateAccount,
+  handleCloseAccount,
+  handleFreezeAccount,
+  handleUnfreezeAccount
+} from './account.controller.js';
 
 const router = Router();
+const staffRoles = ['ADMIN', 'TELLER', 'MANAGER', 'CREDIT_OFFICER', 'AUDITOR'];
 
-router.get('/:id', authenticate, requireRoles('ADMIN', 'TELLER', 'MANAGER', 'AUDITOR'), handleGetAccount);
-router.get(
-  '/member/:memberId',
-  authenticate,
-  requireRoles('ADMIN', 'TELLER', 'MANAGER', 'AUDITOR'),
-  handleGetMemberAccounts
-);
+// List accounts
+router.get('/', authenticate, requireRoles(...staffRoles), handleListAccounts);
+
+// Get accounts for a specific member
+router.get('/member/:memberId', authenticate, requireRoles(...staffRoles), handleGetMemberAccounts);
+
+// Get single account
+router.get('/:id', authenticate, requireRoles(...staffRoles), handleGetAccount);
+
+// Create account (Teller/Manager/Admin)
+router.post('/', authenticate, requireRoles('ADMIN', 'TELLER', 'MANAGER'), handleCreateAccount);
+
+// Update account (Manager/Admin)
+router.put('/:id', authenticate, requireRoles('ADMIN', 'MANAGER'), handleUpdateAccount);
+
+// Close account (Manager/Admin)
+router.post('/:id/close', authenticate, requireRoles('ADMIN', 'MANAGER'), handleCloseAccount);
+
+// Freeze account (Manager/Admin)
+router.post('/:id/freeze', authenticate, requireRoles('ADMIN', 'MANAGER'), handleFreezeAccount);
+
+// Unfreeze account (Manager/Admin)
+router.post('/:id/unfreeze', authenticate, requireRoles('ADMIN', 'MANAGER'), handleUnfreezeAccount);
 
 export default router;
-
