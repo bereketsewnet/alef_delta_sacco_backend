@@ -12,7 +12,7 @@ function getExecutor(connection) {
 
 export async function findLoanProductByCode(code) {
   const rows = await query('SELECT * FROM loan_products WHERE product_code = ?', [code]);
-  return rows[0];
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 }
 
 export async function createLoanApplication(record, connection) {
@@ -39,9 +39,15 @@ export async function createLoanApplication(record, connection) {
 }
 
 export async function findLoanById(loanId, connection) {
-  const executor = getExecutor(connection);
-  const [rows] = await executor.query('SELECT * FROM loan_applications WHERE loan_id = ?', [loanId]);
-  return rows[0];
+  if (connection) {
+    // When using a connection, query returns [rows, fields]
+    const [rows] = await connection.query('SELECT * FROM loan_applications WHERE loan_id = ?', [loanId]);
+    return rows[0];
+  } else {
+    // When using global query, it already returns just rows (array)
+    const rows = await query('SELECT * FROM loan_applications WHERE loan_id = ?', [loanId]);
+    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  }
 }
 
 export async function updateLoan(loanId, updates, connection) {
@@ -58,5 +64,56 @@ export async function updateLoan(loanId, updates, connection) {
     `UPDATE loan_applications SET ${fields.join(', ')}, updated_at = NOW() WHERE loan_id = ?`,
     params
   );
+}
+
+export async function listLoans(filters = {}) {
+  const where = [];
+  const params = [];
+  
+  if (filters.workflow_status) {
+    where.push('workflow_status = ?');
+    params.push(filters.workflow_status);
+  }
+  if (filters.member_id) {
+    where.push('member_id = ?');
+    params.push(filters.member_id);
+  }
+  if (filters.product_code) {
+    where.push('product_code = ?');
+    params.push(filters.product_code);
+  }
+  
+  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const limit = Number(filters.limit || 50);
+  const offset = Number(filters.offset || 0);
+  
+  // Get total count
+  const countRows = await query(
+    `SELECT COUNT(*) as total FROM loan_applications ${whereClause}`,
+    params
+  );
+  const total = countRows[0]?.total || 0;
+  
+  // Get loans with member info (use LEFT JOIN to include loans even if member is missing)
+  const sql = `SELECT 
+    l.*,
+    m.first_name,
+    m.last_name,
+    m.membership_no,
+    COALESCE(CONCAT(m.first_name, ' ', m.last_name), 'Unknown Member') as member_name
+   FROM loan_applications l
+   LEFT JOIN members m ON l.member_id = m.member_id
+   ${whereClause}
+   ORDER BY l.created_at DESC
+   LIMIT ? OFFSET ?`;
+  
+  const rows = await query(sql, [...params, limit, offset]);
+  
+  return {
+    data: Array.isArray(rows) ? rows : [],
+    total: Number(total),
+    limit,
+    offset
+  };
 }
 

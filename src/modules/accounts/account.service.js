@@ -55,8 +55,9 @@ export async function createAccount(payload) {
     throw httpError(404, 'Member not found');
   }
   
-  if (member.status !== 'ACTIVE') {
-    throw httpError(400, 'Member must be active to open an account');
+  // Allow account creation for PENDING and ACTIVE members
+  if (member.status === 'SUSPENDED' || member.status === 'CLOSED') {
+    throw httpError(400, 'Cannot open account for suspended or closed members');
   }
   
   // Check if account with same product already exists

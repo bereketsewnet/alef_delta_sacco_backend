@@ -20,3 +20,7 @@ export async function addCollateral(item) {
   );
 }
 
+export async function deleteCollateral(collateralId) {
+  await execute('DELETE FROM collateral WHERE collateral_id = ?', [collateralId]);
+}
+

@@ -58,6 +58,10 @@ export async function login({ actor = 'STAFF', identifier, password }) {
   if (!member) {
     throw httpError(401, 'Invalid credentials');
   }
+  // Check if member is active - PENDING members cannot login
+  if (member.status !== 'ACTIVE') {
+    throw httpError(403, 'Account is not active. Please contact the manager for activation.');
+  }
   const match = await comparePassword(password, member.password_hash);
   if (!match) {
     throw httpError(401, 'Invalid credentials');

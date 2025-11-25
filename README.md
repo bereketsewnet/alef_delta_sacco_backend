@@ -110,3 +110,7 @@ Configure the bot via environment variables (`BOT_TOKEN`, `BOT_WEBHOOK_URL`). Th
 - `openapi.yaml` – canonical API contract.
 - `postman_collection.json` – sample request set with placeholders.
 - `ALEF-DELTA SACCO MANAGEMENT SYSTEM.pdf` – authoritative business specification.
+
+## for single migration
+npm run migrate:single <filename>
+e.g npm run migrate:single 08_add_pending_status_to_members.sql

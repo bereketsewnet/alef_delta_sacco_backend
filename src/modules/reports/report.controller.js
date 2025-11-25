@@ -1,4 +1,4 @@
-import { getOperationalSummary, getTransactionStats, getTellerDashboardStats } from './report.service.js';
+import { getOperationalSummary, getTransactionStats, getTellerDashboardStats, getCreditOfficerDashboardStats } from './report.service.js';
 
 export async function handleSummary(req, res, next) {
   try {
@@ -25,6 +25,15 @@ export async function handleTellerDashboard(req, res, next) {
       return res.status(401).json({ message: 'User ID required' });
     }
     const stats = await getTellerDashboardStats(req.user.userId);
+    res.json(stats);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleCreditOfficerDashboard(req, res, next) {
+  try {
+    const stats = await getCreditOfficerDashboardStats();
     res.json(stats);
   } catch (error) {
     next(error);

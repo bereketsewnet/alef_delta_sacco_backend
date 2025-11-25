@@ -72,20 +72,38 @@ export function buildScheduleDeclining(principal, interestRate, termMonths, star
 }
 
 export function runGatekeeper(member, payload, product) {
-  const installmentInfo = calculateInstallment({
-    principal: payload.applied_amount,
-    interestRate: payload.interest_rate || product.interest_rate,
-    interestType: payload.interest_type || product.interest_type,
-    termMonths: payload.term_months
-  });
-  const maxInstallment = member.monthly_income / 3;
+  // Ensure all values are numbers and have defaults
+  const appliedAmount = Number(payload.applied_amount) || 0;
+  const interestRate = Number(payload.interest_rate || product?.interest_rate) || 0;
+  const interestType = payload.interest_type || product?.interest_type || 'FLAT';
+  const termMonths = Number(payload.term_months) || 1;
+  const monthlyIncome = Number(member.monthly_income) || 0;
+
+  // Only calculate installment if we have valid loan amount
+  let installmentInfo = { installment: 0, monthlyRate: 0 };
+  if (appliedAmount > 0 && interestRate >= 0 && termMonths > 0) {
+    installmentInfo = calculateInstallment({
+      principal: appliedAmount,
+      interestRate: interestRate,
+      interestType: interestType,
+      termMonths: termMonths
+    });
+  }
+
+  const maxInstallment = monthlyIncome / 3;
   const checks = [
     { name: 'status', pass: member.status === 'ACTIVE' },
-    { name: 'income', pass: member.monthly_income > 0 },
+    { name: 'income', pass: monthlyIncome > 0 },
     {
       name: 'affordability',
       pass: installmentInfo.installment <= maxInstallment || member.member_type === 'SME',
-      data: { installment: installmentInfo.installment, maxInstallment }
+      data: { 
+        installment: installmentInfo.installment, 
+        maxInstallment: maxInstallment,
+        appliedAmount: appliedAmount,
+        interestRate: interestRate,
+        termMonths: termMonths
+      }
     }
   ];
   return { passed: checks.every((c) => c.pass), checks, installment: installmentInfo.installment, maxInstallment };

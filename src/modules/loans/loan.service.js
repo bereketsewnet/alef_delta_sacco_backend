@@ -6,9 +6,10 @@ import {
   findLoanProductByCode,
   createLoanApplication,
   findLoanById,
-  updateLoan
+  updateLoan,
+  listLoans
 } from './loan.repository.js';
-import { withTransaction } from '../../core/db.js';
+import { withTransaction, query } from '../../core/db.js';
 import { findAccountById } from '../accounts/account.repository.js';
 import { updateAccountBalance } from '../accounts/account.service.js';
 import { insertAuditLog } from '../admin/audit.repository.js';
@@ -124,6 +125,36 @@ export function buildSchedule({ loan, startDate }) {
   return buildScheduleHelper(loan, startDate);
 }
 
+export async function updateLoanStatus(loanId, status, actor) {
+  if (!['ADMIN', 'MANAGER', 'CREDIT_OFFICER'].includes(actor.role)) {
+    throw httpError(403, 'Only credit roles can update loan status');
+  }
+  const loan = await findLoanById(loanId);
+  if (!loan) {
+    throw httpError(404, 'Loan not found');
+  }
+  
+  // For APPROVED status, use the approveLoan function only if not already approved
+  if (status === 'APPROVED' && loan.workflow_status !== 'APPROVED') {
+    return approveLoan(loanId, {
+      approved_amount: loan.applied_amount,
+      term_months: loan.term_months,
+      interest_rate: loan.interest_rate
+    }, actor);
+  }
+  
+  // For other statuses or if already approved, just update the workflow_status
+  await updateLoan(loanId, { workflow_status: status });
+  await insertAuditLog({
+    userId: actor.userId,
+    action: 'UPDATE_LOAN_STATUS',
+    entity: 'loan_applications',
+    entityId: loanId,
+    metadata: { status, previous_status: loan.workflow_status }
+  });
+  return findLoanById(loanId);
+}
+
 export { calculateInstallment } from './gatekeeper.js';
 
 export async function getLoanOrFail(loanId) {
@@ -135,14 +166,33 @@ export async function getLoanOrFail(loanId) {
 }
 
 export async function addLoanGuarantor(loanId, payload, files) {
-  await getLoanOrFail(loanId);
+  const loan = await getLoanOrFail(loanId);
+  
+  // Get existing guarantors count to calculate duty value if not provided
+  const existingGuarantors = await query('SELECT COUNT(*) as count FROM guarantors WHERE loan_id = ?', [loanId]);
+  const guarantorCount = Number(existingGuarantors[0]?.count || 0) + 1; // +1 for the new one
+  
+  // Calculate duty value: if not provided, divide loan amount by total guarantors
+  let dutyValue = payload.duty_value ? Number(payload.duty_value) : null;
+  if (!dutyValue && loan.applied_amount) {
+    dutyValue = Number(loan.applied_amount) / guarantorCount;
+  }
+  
+  // If guaranteed_amount is not provided, use duty_value
+  const guaranteedAmount = payload.guaranteed_amount ? Number(payload.guaranteed_amount) : dutyValue;
+  
   await addGuarantor({
     guarantor_id: uuid(),
     loan_id: loanId,
-    guarantor_member_id: payload.guarantor_member_id,
-    guaranteed_amount: payload.guaranteed_amount,
+    full_name: payload.full_name,
+    phone: payload.phone,
+    relationship: payload.relationship || null,
+    address: payload.address || null,
+    guaranteed_amount: guaranteedAmount,
     id_front_url: files?.id_front?.[0] ? toPublicUrl(files.id_front[0].path) : null,
-    id_back_url: files?.id_back?.[0] ? toPublicUrl(files.id_back[0].path) : null
+    id_back_url: files?.id_back?.[0] ? toPublicUrl(files.id_back[0].path) : null,
+    profile_photo_url: files?.profile_photo?.[0] ? toPublicUrl(files.profile_photo[0].path) : null,
+    duty_value: dutyValue
   });
   return { success: true };
 }
@@ -158,5 +208,9 @@ export async function addLoanCollateral(loanId, payload, files) {
     document_url: files?.document?.[0] ? toPublicUrl(files.document[0].path) : null
   });
   return { success: true };
+}
+
+export async function getLoans(filters = {}) {
+  return listLoans(filters);
 }
 
