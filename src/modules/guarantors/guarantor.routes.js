@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../../core/middleware/auth.js';
 import { requireRoles } from '../../core/middleware/roles.js';
-import { handleVerifyGuarantor, handleGetGuarantorSummary } from './guarantor.controller.js';
+import { handleVerifyGuarantor, handleGetGuarantorSummary, handleListGuarantorsForLoan, handleDeleteGuarantor } from './guarantor.controller.js';
 
 const router = Router();
 
@@ -10,6 +10,10 @@ router.post('/:id/verify', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER',
 
 // Get guarantor summary for a loan
 router.get('/loan/:loanId/summary', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleGetGuarantorSummary);
+// List all guarantors for a loan
+router.get('/loan/:loanId', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleListGuarantorsForLoan);
+// Delete a guarantor
+router.delete('/:id', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleDeleteGuarantor);
 
 export default router;
 

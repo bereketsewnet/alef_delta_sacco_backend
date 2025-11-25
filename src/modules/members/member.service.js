@@ -61,9 +61,9 @@ function transformMemberPayload(payload) {
     }
   });
   
-  // Ensure status has a default
+  // Ensure status has a default - new members are PENDING until manager activates them
   if (!transformed.status) {
-    transformed.status = 'ACTIVE';
+    transformed.status = 'PENDING';
   }
   
   return transformed;

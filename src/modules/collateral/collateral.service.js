@@ -2,6 +2,7 @@ import { v4 as uuid } from 'uuid';
 import httpError from '../../core/utils/httpError.js';
 import { query, execute } from '../../core/db.js';
 import { findLoanById } from '../loans/loan.repository.js';
+import { deleteCollateral as deleteCollateralRepo } from './collateral.repository.js';
 
 export async function verifyCollateral(collateralId, actor, payload) {
   const rows = await query('SELECT * FROM collateral WHERE collateral_id = ?', [collateralId]);
@@ -48,5 +49,10 @@ export async function getCollateralSummary(loanId) {
     all_verified: allVerified,
     count: collaterals.length
   };
+}
+
+export async function deleteCollateral(collateralId) {
+  await deleteCollateralRepo(collateralId);
+  return { success: true };
 }
 

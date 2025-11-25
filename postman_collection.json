@@ -924,14 +924,39 @@
               "mode": "formdata",
               "formdata": [
                 {
-                  "key": "guarantor_member_id",
-                  "value": "member-id-here",
+                  "key": "full_name",
+                  "value": "John Doe",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "+251912345678",
+                  "type": "text"
+                },
+                {
+                  "key": "relationship",
+                  "value": "Friend",
+                  "type": "text"
+                },
+                {
+                  "key": "address",
+                  "value": "Addis Ababa, Ethiopia",
                   "type": "text"
                 },
                 {
                   "key": "guaranteed_amount",
                   "value": "25000",
                   "type": "text"
+                },
+                {
+                  "key": "duty_value",
+                  "value": "25000",
+                  "type": "text"
+                },
+                {
+                  "key": "profile_photo",
+                  "type": "file",
+                  "src": []
                 },
                 {
                   "key": "id_front",

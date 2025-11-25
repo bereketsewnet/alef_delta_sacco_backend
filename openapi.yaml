@@ -916,12 +916,23 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: [guarantor_member_id, guaranteed_amount]
+              required: [full_name, phone]
               properties:
-                guarantor_member_id:
+                full_name:
+                  type: string
+                phone:
+                  type: string
+                relationship:
+                  type: string
+                address:
                   type: string
                 guaranteed_amount:
                   type: number
+                duty_value:
+                  type: number
+                profile_photo:
+                  type: string
+                  format: binary
                 id_front:
                   type: string
                   format: binary

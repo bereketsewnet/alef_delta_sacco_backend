@@ -7,14 +7,17 @@ import {
   getLoanOrFail,
   calculateInstallment,
   addLoanGuarantor,
-  addLoanCollateral
+  addLoanCollateral,
+  getLoans,
+  updateLoanStatus
 } from './loan.service.js';
 import {
   createLoanSchema,
   approveLoanSchema,
   installmentSchema,
   guarantorSchema,
-  collateralSchema
+  collateralSchema,
+  updateLoanStatusSchema
 } from './loan.validators.js';
 
 function validate(schema, payload) {
@@ -23,6 +26,35 @@ function validate(schema, payload) {
     throw httpError(400, 'Validation failed', error.details);
   }
   return value;
+}
+
+export async function handleListLoans(req, res, next) {
+  try {
+    const { limit, offset, workflow_status, member_id, product_code } = req.query;
+    const filters = {
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+      workflow_status,
+      member_id,
+      product_code
+    };
+    const result = await getLoans(filters);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleGetLoan(req, res, next) {
+  try {
+    const loan = await getLoanOrFail(req.params.id);
+    if (!loan) {
+      return res.status(404).json({ status: 'error', message: 'Loan not found' });
+    }
+    res.json(loan);
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function handleCreateLoan(req, res, next) {
@@ -89,6 +121,16 @@ export async function handleAddCollateral(req, res, next) {
     const payload = validate(collateralSchema, req.body);
     const result = await addLoanCollateral(req.params.id, payload, req.files || {});
     res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleUpdateLoanStatus(req, res, next) {
+  try {
+    const payload = validate(updateLoanStatusSchema, req.body);
+    const loan = await updateLoanStatus(req.params.id, payload.workflow_status, req.user);
+    res.json(loan);
   } catch (error) {
     next(error);
   }

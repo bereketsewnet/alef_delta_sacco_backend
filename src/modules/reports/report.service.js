@@ -10,7 +10,7 @@ export async function getOperationalSummary() {
   );
   
   const [pendingLoans] = await query(
-    "SELECT COUNT(*) as count FROM loan_applications WHERE workflow_status IN ('SUBMITTED', 'REVIEW')"
+    "SELECT COUNT(*) as count FROM loan_applications WHERE workflow_status IN ('PENDING', 'UNDER_REVIEW')"
   );
 
   // Monthly deposits (current month)
@@ -145,6 +145,50 @@ export async function getTellerDashboardStats(userId) {
       member_name: `${t.first_name} ${t.last_name}`,
       membership_no: t.membership_no
     }))
+  };
+}
+
+export async function getCreditOfficerDashboardStats() {
+  // Pending reviews (loans in UNDER_REVIEW or PENDING status)
+  const [pendingReviews] = await query(
+    `SELECT COUNT(*) as count 
+     FROM loan_applications 
+     WHERE workflow_status IN ('PENDING', 'UNDER_REVIEW')`
+  );
+
+  // This month applications processed (APPROVED, REJECTED, or DISBURSED this month)
+  const [thisMonth] = await query(
+    `SELECT COUNT(*) as count 
+     FROM loan_applications 
+     WHERE workflow_status IN ('APPROVED', 'REJECTED', 'DISBURSED')
+     AND DATE(created_at) >= DATE_FORMAT(NOW(), '%Y-%m-01')`
+  );
+
+  // Portfolio value (sum of approved amounts for active loans)
+  const [portfolioValue] = await query(
+    `SELECT COALESCE(SUM(approved_amount), 0) as total
+     FROM loan_applications 
+     WHERE workflow_status IN ('APPROVED', 'DISBURSED')`
+  );
+
+  // Default rate (loans in DEFAULT status / total disbursed loans)
+  const [defaultStats] = await query(
+    `SELECT 
+       SUM(CASE WHEN workflow_status = 'DEFAULT' THEN 1 ELSE 0 END) as default_count,
+       COUNT(CASE WHEN workflow_status IN ('DISBURSED', 'DEFAULT') THEN 1 END) as total_disbursed
+     FROM loan_applications`
+  );
+
+  const totalDisbursed = Number(defaultStats.total_disbursed || 0);
+  const defaultCount = Number(defaultStats.default_count || 0);
+  const defaultRate = totalDisbursed > 0 ? (defaultCount / totalDisbursed) * 100 : 0;
+
+  return {
+    pending_reviews: Number(pendingReviews.count || 0),
+    this_month_processed: Number(thisMonth.count || 0),
+    this_month: Number(thisMonth.count || 0), // Keep for backward compatibility
+    portfolio_value: Number(portfolioValue.total || 0),
+    default_rate: Number(defaultRate.toFixed(2))
   };
 }
 

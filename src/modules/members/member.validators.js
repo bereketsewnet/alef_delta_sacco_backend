@@ -16,7 +16,7 @@ export const createMemberSchema = Joi.object({
   member_type: Joi.string().valid('INDIVIDUAL', 'GOV_EMP', 'NGO', 'SME', 'TRADER', 'FARMER', 'SELF').required(),
   monthly_income: Joi.number().min(0).required(),
   tin_number: Joi.string().allow(null, ''),
-  status: Joi.string().valid('ACTIVE', 'SUSPENDED').default('ACTIVE'),
+  status: Joi.string().valid('PENDING', 'ACTIVE', 'SUSPENDED', 'CLOSED').default('PENDING'),
   password: Joi.string().min(6).required() // Changed from 8 to 6 to match frontend
 });
 

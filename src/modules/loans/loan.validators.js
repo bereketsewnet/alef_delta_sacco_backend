@@ -28,13 +28,21 @@ export const installmentSchema = Joi.object({
 });
 
 export const guarantorSchema = Joi.object({
-  guarantor_member_id: Joi.string().required(),
-  guaranteed_amount: Joi.number().positive().required()
+  full_name: Joi.string().required(),
+  phone: Joi.string().required(),
+  relationship: Joi.string().allow(null, '').optional(),
+  address: Joi.string().allow(null, '').optional(),
+  guaranteed_amount: Joi.number().positive().optional(),
+  duty_value: Joi.number().positive().allow(null, '').optional()
 });
 
 export const collateralSchema = Joi.object({
   type: Joi.string().valid('LAND', 'VEHICLE', 'CASH', 'OTHER').required(),
   description: Joi.string().required(),
   estimated_value: Joi.number().positive().required()
+});
+
+export const updateLoanStatusSchema = Joi.object({
+  workflow_status: Joi.string().valid('PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED').required()
 });
 
