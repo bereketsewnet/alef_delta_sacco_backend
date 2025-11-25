@@ -4,10 +4,42 @@ export async function getOperationalSummary() {
   const [memberStats] = await query("SELECT COUNT(*) AS total_members, SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) as active_members FROM members");
   const [accountStats] = await query('SELECT COUNT(*) AS total_accounts, SUM(balance) AS total_balance FROM accounts');
   
-  // Loans outstanding: Sum of approved amount for active loans (simplified)
+  // Loans outstanding: Sum of approved amount for APPROVED and DISBURSED loans
   const [loanStats] = await query(
-    "SELECT COUNT(*) AS total_loans, SUM(approved_amount) AS total_outstanding FROM loan_applications WHERE workflow_status = 'DISBURSED'"
+    `SELECT COUNT(*) AS total_loans, COALESCE(SUM(approved_amount), 0) AS total_outstanding 
+     FROM loan_applications 
+     WHERE workflow_status IN ('APPROVED', 'DISBURSED')`
   );
+  
+  // Calculate loan portfolio trend: current month vs last month
+  const [currentMonthLoans] = await query(
+    `SELECT COALESCE(SUM(approved_amount), 0) AS total
+     FROM loan_applications 
+     WHERE workflow_status IN ('APPROVED', 'DISBURSED')
+     AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')`
+  );
+  
+  const [lastMonthLoans] = await query(
+    `SELECT COALESCE(SUM(approved_amount), 0) AS total
+     FROM loan_applications 
+     WHERE workflow_status IN ('APPROVED', 'DISBURSED')
+     AND created_at >= DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m-01')
+     AND created_at < DATE_FORMAT(NOW(), '%Y-%m-01')`
+  );
+  
+  const currentMonthValue = Number(currentMonthLoans.total || 0);
+  const lastMonthValue = Number(lastMonthLoans.total || 0);
+  let loanPortfolioTrend = 0;
+  let isPositive = true;
+  
+  if (lastMonthValue > 0) {
+    loanPortfolioTrend = ((currentMonthValue - lastMonthValue) / lastMonthValue) * 100;
+    isPositive = loanPortfolioTrend >= 0;
+  } else if (currentMonthValue > 0) {
+    // If last month was 0 but current month has value, it's 100% increase
+    loanPortfolioTrend = 100;
+    isPositive = true;
+  }
   
   const [pendingLoans] = await query(
     "SELECT COUNT(*) as count FROM loan_applications WHERE workflow_status IN ('PENDING', 'UNDER_REVIEW')"
@@ -24,6 +56,8 @@ export async function getOperationalSummary() {
   return {
     total_savings: Number(accountStats.total_balance || 0),
     total_loans_outstanding: Number(loanStats.total_outstanding || 0),
+    loan_portfolio_trend: Number(loanPortfolioTrend.toFixed(1)),
+    loan_portfolio_trend_positive: isPositive,
     monthly_deposits: Number(monthlyStats.monthly_deposits || 0),
     delinquency_rate: 0, // Placeholder
     active_members: Number(memberStats.active_members || 0),
