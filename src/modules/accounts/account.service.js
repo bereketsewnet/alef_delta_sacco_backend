@@ -9,6 +9,7 @@ import {
   updateAccount as updateAccountRepo
 } from './account.repository.js';
 import { findMemberById } from '../members/member.repository.js';
+import { findAccountProductByCode } from '../account-products/account-product.repository.js';
 import { query, execute } from '../../core/db.js';
 
 export async function getAccounts(filters) {
@@ -60,6 +61,15 @@ export async function createAccount(payload) {
     throw httpError(400, 'Cannot open account for suspended or closed members');
   }
   
+  // Verify account product exists and is active
+  const product = await findAccountProductByCode(payload.product_code);
+  if (!product) {
+    throw httpError(404, `Account product '${payload.product_code}' not found`);
+  }
+  if (!product.is_active) {
+    throw httpError(400, `Account product '${payload.product_code}' is not active`);
+  }
+  
   // Check if account with same product already exists
   const existing = await query(
     'SELECT * FROM accounts WHERE member_id = ? AND product_code = ? AND status != ?',
@@ -100,6 +110,15 @@ export async function updateAccount(accountId, payload) {
     const balance = Number(account.balance);
     if (balance !== 0) {
       throw httpError(400, 'Cannot change product code for account with non-zero balance');
+    }
+    
+    // Verify new account product exists and is active
+    const product = await findAccountProductByCode(payload.product_code);
+    if (!product) {
+      throw httpError(404, `Account product '${payload.product_code}' not found`);
+    }
+    if (!product.is_active) {
+      throw httpError(400, `Account product '${payload.product_code}' is not active`);
     }
     
     // Check if member already has an account with the new product code
