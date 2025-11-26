@@ -11,6 +11,7 @@ import adminRoutes from '../modules/admin/admin.routes.js';
 import collateralRoutes from '../modules/collateral/collateral.routes.js';
 import guarantorRoutes from '../modules/guarantors/guarantor.routes.js';
 import beneficiaryRoutes from '../modules/beneficiaries/beneficiary.routes.js';
+import loanProductRoutes from '../modules/loan-products/loan-product.routes.js';
 import clientRoutes from '../modules/client/client.routes.js';
 import { healthCheck } from '../core/db.js';
 
@@ -28,6 +29,7 @@ router.use('/members', memberRoutes);
 router.use('/accounts', accountRoutes);
 router.use('/transactions', transactionRoutes);
 router.use('/loans', loanRoutes);
+router.use('/loan-products', loanProductRoutes);
 router.use('/collateral', collateralRoutes);
 router.use('/guarantors', guarantorRoutes);
 router.use('/beneficiaries', beneficiaryRoutes);

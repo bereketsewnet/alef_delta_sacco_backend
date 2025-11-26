@@ -113,4 +113,4 @@ Configure the bot via environment variables (`BOT_TOKEN`, `BOT_WEBHOOK_URL`). Th
 
 ## for single migration
 npm run migrate:single <filename>
-e.g npm run migrate:single 08_add_pending_status_to_members.sql
+e.g npm run migrate:single 09_add_category_to_loan_products.sql

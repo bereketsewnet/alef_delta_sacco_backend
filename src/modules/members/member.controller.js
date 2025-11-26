@@ -2,7 +2,8 @@ import httpError from '../../core/utils/httpError.js';
 import {
   createMemberSchema,
   updateMemberSchema,
-  beneficiarySchema
+  beneficiarySchema,
+  resetMemberPasswordSchema
 } from './member.validators.js';
 import {
   getMembers,
@@ -13,7 +14,8 @@ import {
   addMemberBeneficiary,
   removeMember,
   activateMember,
-  suspendMember
+  suspendMember,
+  resetMemberPasswordById
 } from './member.service.js';
 
 function validate(schema, payload) {
@@ -122,6 +124,19 @@ export async function handleSuspendMember(req, res, next) {
   try {
     const member = await suspendMember(req.params.id, req.user, req.body.reason);
     res.json(member);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleResetMemberPassword(req, res, next) {
+  try {
+    if (!req.user.isAdmin) {
+      throw httpError(403, 'Only admins can reset member passwords');
+    }
+    const payload = validate(resetMemberPasswordSchema, req.body);
+    const result = await resetMemberPasswordById(req.params.id, payload.new_password, req.user);
+    res.json(result);
   } catch (error) {
     next(error);
   }

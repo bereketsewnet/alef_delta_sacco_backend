@@ -33,3 +33,7 @@ export const beneficiarySchema = Joi.object({
   phone: Joi.string().required()
 });
 
+export const resetMemberPasswordSchema = Joi.object({
+  new_password: Joi.string().min(6).required()
+});
+
