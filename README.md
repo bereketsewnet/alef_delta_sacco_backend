@@ -113,4 +113,4 @@ Configure the bot via environment variables (`BOT_TOKEN`, `BOT_WEBHOOK_URL`). Th
 
 ## for single migration
 npm run migrate:single <filename>
-e.g npm run migrate:single 10_create_account_products.sql
+e.g npm run migrate:single 11_expand_account_products.sql

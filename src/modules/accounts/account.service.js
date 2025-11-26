@@ -12,15 +12,95 @@ import { findMemberById } from '../members/member.repository.js';
 import { findAccountProductByCode } from '../account-products/account-product.repository.js';
 import { query, execute } from '../../core/db.js';
 
+function parseMetadata(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch (error) {
+      return null;
+    }
+  }
+  return raw;
+}
+
+function addComputedFields(account) {
+  if (!account) return null;
+  return {
+    ...account,
+    metadata: parseMetadata(account.metadata),
+    available_balance: Number(account.balance) - Number(account.lien_amount || 0)
+  };
+}
+
+function buildAccountMetadata(product, input = {}) {
+  const metadata = {};
+  const guardian = {};
+  const commodity = {};
+  const micro = {};
+
+  const trimmed = (value) => (typeof value === 'string' ? value.trim() : value);
+
+  if (product.guardian_required || trimmed(input.guardian_name) || trimmed(input.guardian_phone)) {
+    guardian.name = trimmed(input.guardian_name) || null;
+    guardian.relationship = trimmed(input.guardian_relationship) || null;
+    guardian.phone = trimmed(input.guardian_phone) || null;
+    if (product.guardian_required && !guardian.name) {
+      throw httpError(400, 'Guardian name is required for this account product');
+    }
+    metadata.guardian = guardian;
+  }
+
+  if (product.commodity_required || trimmed(input.commodity_type)) {
+    const commodityType = trimmed(input.commodity_type) || product.default_commodity_type || null;
+    const quantity = input.commodity_quantity !== undefined ? Number(input.commodity_quantity) : null;
+    const unit = trimmed(input.commodity_unit) || null;
+    const estimatedValue = input.estimated_value !== undefined ? Number(input.estimated_value) : null;
+    if (product.commodity_required && !commodityType) {
+      throw httpError(400, 'Commodity type is required for in-kind savings');
+    }
+    if (product.commodity_required && (!quantity || quantity <= 0)) {
+      throw httpError(400, 'Commodity quantity must be greater than zero');
+    }
+    commodity.type = commodityType;
+    if (quantity !== null && !Number.isNaN(quantity)) {
+      commodity.quantity = quantity;
+    }
+    if (unit) {
+      commodity.unit = unit;
+    }
+    if (estimatedValue !== null && !Number.isNaN(estimatedValue)) {
+      commodity.estimated_value = estimatedValue;
+    }
+    metadata.in_kind = commodity;
+  }
+
+  if (product.product_kind === 'MICRO' || product.target_required) {
+    const targetAmount = input.target_amount !== undefined ? Number(input.target_amount) : null;
+    if (product.target_required && (!targetAmount || targetAmount <= 0)) {
+      throw httpError(400, 'Target amount is required for micro-savings products');
+    }
+    if (targetAmount !== null && !Number.isNaN(targetAmount)) {
+      micro.target_amount = targetAmount;
+    }
+    if (input.target_date) {
+      micro.target_date = input.target_date;
+    }
+    metadata.micro = micro;
+  }
+
+  if (input.additional_notes) {
+    metadata.notes = trimmed(input.additional_notes);
+  }
+
+  return Object.keys(metadata).length ? metadata : null;
+}
+
 export async function getAccounts(filters) {
   const data = await listAccounts(filters);
   const total = await countAccounts(filters);
   
-  // Add available balance to each account
-  const enriched = data.map(account => ({
-    ...account,
-    available_balance: Number(account.balance) - Number(account.lien_amount || 0)
-  }));
+  const enriched = data.map(addComputedFields);
   
   return {
     data: enriched,
@@ -35,18 +115,12 @@ export async function getAccountById(accountId) {
   if (!account) {
     throw httpError(404, 'Account not found');
   }
-  return {
-    ...account,
-    available_balance: Number(account.balance) - Number(account.lien_amount || 0)
-  };
+  return addComputedFields(account);
 }
 
 export async function getAccountsForMember(memberId) {
   const accounts = await listAccountsByMember(memberId);
-  return accounts.map(account => ({
-    ...account,
-    available_balance: Number(account.balance) - Number(account.lien_amount || 0)
-  }));
+  return accounts.map(addComputedFields);
 }
 
 export async function createAccount(payload) {
@@ -81,6 +155,7 @@ export async function createAccount(payload) {
   }
   
   const accountId = uuid();
+  const metadata = buildAccountMetadata(product, payload.metadata || {});
   await createAccountRepo({
     account_id: accountId,
     member_id: payload.member_id,
@@ -88,6 +163,8 @@ export async function createAccount(payload) {
     currency: payload.currency || 'ETB',
     balance: 0,
     lien_amount: 0,
+    metadata,
+    interest_method: product.interest_method || 'STANDARD',
     status: 'ACTIVE'
   });
   
@@ -137,6 +214,13 @@ export async function updateAccount(accountId, payload) {
     if (payload.status === 'CLOSED' && Number(account.balance) !== 0) {
       throw httpError(400, 'Cannot close account with non-zero balance');
     }
+  }
+  
+  if (payload.metadata) {
+    const productForValidation = payload.product_code && payload.product_code !== account.product_code
+      ? await findAccountProductByCode(payload.product_code)
+      : await findAccountProductByCode(account.product_code);
+    payload.metadata = buildAccountMetadata(productForValidation, payload.metadata);
   }
   
   await updateAccountRepo(accountId, payload);
