@@ -13,6 +13,7 @@ import guarantorRoutes from '../modules/guarantors/guarantor.routes.js';
 import beneficiaryRoutes from '../modules/beneficiaries/beneficiary.routes.js';
 import loanProductRoutes from '../modules/loan-products/loan-product.routes.js';
 import accountProductRoutes from '../modules/account-products/account-product.routes.js';
+import systemRoutes from '../modules/system/system.routes.js';
 import clientRoutes from '../modules/client/client.routes.js';
 import { healthCheck } from '../core/db.js';
 
@@ -38,6 +39,7 @@ router.use('/beneficiaries', beneficiaryRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/reports', reportRoutes);
 router.use('/admin', adminRoutes);
+router.use('/system', systemRoutes);
 
 // Client-facing endpoints (Telegram Mini App)
 router.use('/client', clientRoutes);

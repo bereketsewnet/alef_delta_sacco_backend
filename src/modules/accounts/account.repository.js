@@ -62,8 +62,8 @@ export async function countAccounts(filters = {}) {
 export async function createAccount(account) {
   await execute(
     `INSERT INTO accounts 
-    (account_id, member_id, product_code, balance, lien_amount, currency, status, version, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    (account_id, member_id, product_code, balance, lien_amount, currency, metadata, interest_method, status, version, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
     [
       account.account_id,
       account.member_id,
@@ -71,6 +71,8 @@ export async function createAccount(account) {
       account.balance || 0,
       account.lien_amount || 0,
       account.currency || 'ETB',
+      account.metadata ? JSON.stringify(account.metadata) : null,
+      account.interest_method || 'STANDARD',
       account.status || 'ACTIVE',
       1
     ]
@@ -84,7 +86,11 @@ export async function updateAccount(accountId, updates) {
   Object.entries(updates).forEach(([key, value]) => {
     if (key !== 'account_id' && key !== 'member_id' && key !== 'version') {
       fields.push(`${key} = ?`);
-      params.push(value);
+      if (key === 'metadata') {
+        params.push(value ? JSON.stringify(value) : null);
+      } else {
+        params.push(value);
+      }
     }
   });
   

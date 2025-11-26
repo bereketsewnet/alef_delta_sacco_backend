@@ -34,6 +34,11 @@
       "key": "loanId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "accountProductCode",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -1157,6 +1162,108 @@
               "raw": "{{baseUrl}}/users",
               "host": ["{{baseUrl}}"],
               "path": ["users"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Account Products",
+      "item": [
+        {
+          "name": "List Account Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-products",
+              "host": ["{{baseUrl}}"],
+              "path": ["account-products"]
+            }
+          }
+        },
+        {
+          "name": "Create Account Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('accountProductCode', response.product_code);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_code\": \"SAV_CHILD_EDU\",\n  \"name\": \"Children Education Savings\",\n  \"category\": \"SAVINGS\",\n  \"product_kind\": \"CHILDREN\",\n  \"guardian_required\": true,\n  \"commodity_required\": false,\n  \"target_required\": true,\n  \"min_balance\": 0,\n  \"min_deposit\": 150,\n  \"interest_rate\": 0,\n  \"withdrawal_policy\": \"Withdrawals require guardian approval\",\n  \"notes\": \"Directive 982/2024 compliant children's savings\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/account-products",
+              "host": ["{{baseUrl}}"],
+              "path": ["account-products"]
+            }
+          }
+        },
+        {
+          "name": "Update Account Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_kind\": \"CHILDREN\",\n  \"guardian_required\": true,\n  \"target_required\": true,\n  \"min_deposit\": 200,\n  \"withdrawal_policy\": \"Guardian approval with 2-day notice\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/account-products/{{accountProductCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["account-products", "{{accountProductCode}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Account Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-products/{{accountProductCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["account-products", "{{accountProductCode}}"]
             }
           }
         }
