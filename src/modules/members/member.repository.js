@@ -123,6 +123,13 @@ export async function updateMemberPassword(memberId, passwordHash) {
   );
 }
 
+export async function resetMemberPassword(memberId, passwordHash) {
+  await execute(
+    'UPDATE members SET password_hash = ?, password_changed_at = NOW() WHERE member_id = ?',
+    [passwordHash, memberId]
+  );
+}
+
 export async function deleteMember(memberId) {
   await execute('DELETE FROM members WHERE member_id = ?', [memberId]);
 }

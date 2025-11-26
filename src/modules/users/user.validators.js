@@ -5,6 +5,10 @@ export const changePasswordSchema = Joi.object({
   new_password: Joi.string().min(8).required()
 });
 
+export const resetPasswordSchema = Joi.object({
+  new_password: Joi.string().min(8).required()
+});
+
 export const createUserSchema = Joi.object({
   username: Joi.string().min(3).max(50).required(),
   password: Joi.string().min(8).required(),
@@ -14,3 +18,10 @@ export const createUserSchema = Joi.object({
   status: Joi.string().valid('ACTIVE', 'DISABLED').default('ACTIVE')
 });
 
+export const updateUserSchema = Joi.object({
+  username: Joi.string().min(3).max(50),
+  email: Joi.string().email(),
+  phone: Joi.string(),
+  role: Joi.string().valid('ADMIN', 'TELLER', 'CREDIT_OFFICER', 'MANAGER', 'AUDITOR'),
+  status: Joi.string().valid('ACTIVE', 'DISABLED')
+});

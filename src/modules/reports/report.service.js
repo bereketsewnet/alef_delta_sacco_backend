@@ -45,6 +45,18 @@ export async function getOperationalSummary() {
     "SELECT COUNT(*) as count FROM loan_applications WHERE workflow_status IN ('PENDING', 'UNDER_REVIEW')"
   );
 
+  // Calculate delinquency rate: loans in DEFAULT status / total disbursed loans
+  const [delinquencyStats] = await query(
+    `SELECT 
+       SUM(CASE WHEN workflow_status = 'DEFAULT' THEN 1 ELSE 0 END) as default_count,
+       COUNT(CASE WHEN workflow_status IN ('DISBURSED', 'DEFAULT') THEN 1 END) as total_disbursed
+     FROM loan_applications`
+  );
+
+  const totalDisbursed = Number(delinquencyStats.total_disbursed || 0);
+  const defaultCount = Number(delinquencyStats.default_count || 0);
+  const delinquencyRate = totalDisbursed > 0 ? (defaultCount / totalDisbursed) * 100 : 0;
+
   // Monthly deposits (current month)
   const [monthlyStats] = await query(
     `SELECT SUM(amount) as monthly_deposits 
@@ -59,7 +71,7 @@ export async function getOperationalSummary() {
     loan_portfolio_trend: Number(loanPortfolioTrend.toFixed(1)),
     loan_portfolio_trend_positive: isPositive,
     monthly_deposits: Number(monthlyStats.monthly_deposits || 0),
-    delinquency_rate: 0, // Placeholder
+    delinquency_rate: Number(delinquencyRate.toFixed(2)),
     active_members: Number(memberStats.active_members || 0),
     pending_approvals: Number(pendingLoans.count || 0),
     // Keep original fields for compatibility if needed

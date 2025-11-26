@@ -1,6 +1,6 @@
 import httpError from '../../core/utils/httpError.js';
-import { changePasswordForUser, createNewUser, getUsers } from './user.service.js';
-import { changePasswordSchema, createUserSchema } from './user.validators.js';
+import { changePasswordForUser, createNewUser, getUsers, updateUser, deleteUserById, resetUserPassword } from './user.service.js';
+import { changePasswordSchema, createUserSchema, updateUserSchema, resetPasswordSchema } from './user.validators.js';
 
 function validate(schema, payload) {
   const { value, error } = schema.validate(payload, { abortEarly: false });
@@ -50,6 +50,44 @@ export async function handleChangePassword(req, res, next) {
       value.new_password,
       req.user
     );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleUpdateUser(req, res, next) {
+  try {
+    if (!req.user.isAdmin) {
+      throw httpError(403, 'Only admins can update users');
+    }
+    const payload = validate(updateUserSchema, req.body);
+    const result = await updateUser(req.params.id, payload, req.user);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleDeleteUser(req, res, next) {
+  try {
+    if (!req.user.isAdmin) {
+      throw httpError(403, 'Only admins can delete users');
+    }
+    const result = await deleteUserById(req.params.id, req.user);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleResetPassword(req, res, next) {
+  try {
+    if (!req.user.isAdmin) {
+      throw httpError(403, 'Only admins can reset user passwords');
+    }
+    const payload = validate(resetPasswordSchema, req.body);
+    const result = await resetUserPassword(req.params.id, payload.new_password, req.user);
     res.json(result);
   } catch (err) {
     next(err);

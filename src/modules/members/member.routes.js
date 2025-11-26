@@ -11,7 +11,8 @@ import {
   handleAddBeneficiary,
   handleDeleteMember,
   handleActivateMember,
-  handleSuspendMember
+  handleSuspendMember,
+  handleResetMemberPassword
 } from './member.controller.js';
 
 const router = Router();
@@ -41,6 +42,9 @@ router.delete('/:id', authenticate, requireRoles('ADMIN'), handleDeleteMember);
 // Manager-specific actions
 router.post('/:id/activate', authenticate, requireRoles('ADMIN', 'MANAGER'), handleActivateMember);
 router.post('/:id/suspend', authenticate, requireRoles('ADMIN', 'MANAGER'), handleSuspendMember);
+
+// Admin-only: Reset member password
+router.post('/:id/reset-password', authenticate, requireRoles('ADMIN'), handleResetMemberPassword);
 
 router.post(
   '/:id/upload',

@@ -7,6 +7,7 @@ import {
   createMember,
   updateMember,
   updateMemberPassword,
+  resetMemberPassword,
   deleteMember,
   countMembers
 } from './member.repository.js';
@@ -195,5 +196,25 @@ export async function suspendMember(memberId, actor, reason) {
   }
   await updateMember(memberId, { status: 'SUSPENDED' });
   return getMemberById(memberId);
+}
+
+export async function resetMemberPasswordById(memberId, newPassword, actor) {
+  // Only admins can reset member passwords
+  if (!actor.isAdmin) {
+    throw httpError(403, 'Only admins can reset member passwords');
+  }
+  
+  const member = await findMemberById(memberId);
+  if (!member) {
+    throw httpError(404, 'Member not found');
+  }
+  
+  // Hash the new password
+  const passwordHash = await hashPassword(newPassword);
+  
+  // Reset password
+  await resetMemberPassword(memberId, passwordHash);
+  
+  return { success: true, message: 'Member password reset successfully' };
 }
 
