@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "ALEF-DELTA SACCO Management System backend (Express + MySQL)",
   "type": "module",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node src/server.js",
     "build": "echo 'No build required for backend'",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "lint": "eslint \"src/**/*.js\"",

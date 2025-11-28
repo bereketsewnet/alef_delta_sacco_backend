@@ -8,7 +8,7 @@ const rootDir = path.resolve(process.cwd());
 const config = {
   env: process.env.NODE_ENV || 'development',
   isProd: (process.env.NODE_ENV || 'development') === 'production',
-  port: Number(process.env.PORT || 4000),
+  port: process.env.PORT || 4000,
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT || 3306),
