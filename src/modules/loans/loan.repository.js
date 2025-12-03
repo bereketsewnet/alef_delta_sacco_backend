@@ -71,15 +71,15 @@ export async function listLoans(filters = {}) {
   const params = [];
   
   if (filters.workflow_status) {
-    where.push('workflow_status = ?');
+    where.push('l.workflow_status = ?');
     params.push(filters.workflow_status);
   }
   if (filters.member_id) {
-    where.push('member_id = ?');
+    where.push('l.member_id = ?'); // Specify table alias to avoid ambiguity
     params.push(filters.member_id);
   }
   if (filters.product_code) {
-    where.push('product_code = ?');
+    where.push('l.product_code = ?');
     params.push(filters.product_code);
   }
   
@@ -87,9 +87,9 @@ export async function listLoans(filters = {}) {
   const limit = Number(filters.limit || 50);
   const offset = Number(filters.offset || 0);
   
-  // Get total count
+  // Get total count (use alias for consistency)
   const countRows = await query(
-    `SELECT COUNT(*) as total FROM loan_applications ${whereClause}`,
+    `SELECT COUNT(*) as total FROM loan_applications l ${whereClause}`,
     params
   );
   const total = countRows[0]?.total || 0;

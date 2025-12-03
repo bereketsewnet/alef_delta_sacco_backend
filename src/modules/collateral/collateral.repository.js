@@ -7,7 +7,7 @@ export async function listCollateralByLoan(loanId) {
 export async function addCollateral(item) {
   await execute(
     `INSERT INTO collateral
-    (collateral_id, loan_id, type, description, estimated_value, document_url)
+    (collateral_id, loan_id, type, description, estimated_value, documents)
     VALUES (?, ?, ?, ?, ?, ?)`,
     [
       item.collateral_id,
@@ -15,7 +15,7 @@ export async function addCollateral(item) {
       item.type,
       item.description,
       item.estimated_value,
-      item.document_url
+      item.documents
     ]
   );
 }

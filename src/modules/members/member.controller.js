@@ -142,3 +142,24 @@ export async function handleResetMemberPassword(req, res, next) {
   }
 }
 
+export async function handleReactivateMember(req, res, next) {
+  try {
+    const { reactivateMember } = await import('./member-lifecycle-processor.js');
+    const notes = req.body.notes || '';
+    const result = await reactivateMember(req.params.id, notes, req.user);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleGetInactiveReport(req, res, next) {
+  try {
+    const { getInactiveMembersReport } = await import('./member-lifecycle-processor.js');
+    const report = await getInactiveMembersReport();
+    res.json({ data: report });
+  } catch (error) {
+    next(error);
+  }
+}
+

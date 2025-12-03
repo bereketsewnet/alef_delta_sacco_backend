@@ -37,7 +37,9 @@ const config = {
       'image/png',
       'image/gif',
       'image/webp',
-      'application/pdf'
+      'application/pdf',
+      'application/msword', // .doc
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
     ]
   },
   otp: {

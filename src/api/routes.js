@@ -5,6 +5,7 @@ import memberRoutes from '../modules/members/member.routes.js';
 import accountRoutes from '../modules/accounts/account.routes.js';
 import transactionRoutes from '../modules/transactions/transaction.routes.js';
 import loanRoutes from '../modules/loans/loan.routes.js';
+import loanRepaymentRoutes from '../modules/loan-repayments/repayment.routes.js';
 import notificationRoutes from '../modules/notifications/notification.routes.js';
 import reportRoutes from '../modules/reports/report.routes.js';
 import adminRoutes from '../modules/admin/admin.routes.js';
@@ -40,6 +41,7 @@ router.use('/notifications', notificationRoutes);
 router.use('/reports', reportRoutes);
 router.use('/admin', adminRoutes);
 router.use('/system', systemRoutes);
+router.use('/', loanRepaymentRoutes); // Loan repayments (mounted at root for /loans/:id/repayments paths)
 
 // Client-facing endpoints (Telegram Mini App)
 router.use('/client', clientRoutes);

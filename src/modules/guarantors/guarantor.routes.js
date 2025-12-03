@@ -9,9 +9,9 @@ const router = Router();
 router.post('/:id/verify', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleVerifyGuarantor);
 
 // Get guarantor summary for a loan
-router.get('/loan/:loanId/summary', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleGetGuarantorSummary);
+router.get('/loan/:loanId/summary', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER', 'TELLER'), handleGetGuarantorSummary);
 // List all guarantors for a loan
-router.get('/loan/:loanId', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleListGuarantorsForLoan);
+router.get('/loan/:loanId', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER', 'TELLER'), handleListGuarantorsForLoan);
 // Delete a guarantor
 router.delete('/:id', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleDeleteGuarantor);
 

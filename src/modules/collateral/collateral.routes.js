@@ -9,9 +9,9 @@ const router = Router();
 router.post('/:id/verify', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleVerifyCollateral);
 
 // Get collateral summary for a loan
-router.get('/loan/:loanId/summary', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleGetCollateralSummary);
+router.get('/loan/:loanId/summary', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER', 'TELLER'), handleGetCollateralSummary);
 // List all collateral for a loan
-router.get('/loan/:loanId', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleListCollateralForLoan);
+router.get('/loan/:loanId', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER', 'TELLER'), handleListCollateralForLoan);
 // Delete collateral
 router.delete('/:id', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleDeleteCollateral);
 

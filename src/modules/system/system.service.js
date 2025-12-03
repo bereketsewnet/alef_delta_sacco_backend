@@ -106,3 +106,23 @@ export async function getMonthlyEodStats() {
     active_tellers: Number(activeTellers.count)
   };
 }
+
+/**
+ * Get all system configuration
+ */
+export async function getAllSystemConfig() {
+  return query('SELECT * FROM system_config ORDER BY config_key');
+}
+
+/**
+ * Update system configuration value
+ */
+export async function updateSystemConfig(configKey, configValue, updatedBy) {
+  await query(
+    'UPDATE system_config SET config_value = ?, updated_by = ?, updated_at = NOW() WHERE config_key = ?',
+    [configValue, updatedBy, configKey]
+  );
+  
+  const [updated] = await query('SELECT * FROM system_config WHERE config_key = ?', [configKey]);
+  return updated;
+}

@@ -5,6 +5,8 @@ import { updateAccountBalance } from '../accounts/account.service.js';
 import { insertTransaction, listTransactions, listTransactionsByMember, findTransactionById, updateTransactionReceipt } from './transaction.repository.js';
 import { insertAuditLog } from '../admin/audit.repository.js';
 import { findMemberById } from '../members/member.repository.js';
+import { updateMonthlyBalanceTracking } from '../accounts/interest-processor.js';
+import { updateMemberActivity } from '../members/member-lifecycle-processor.js';
 
 async function getAccountForUpdate(accountId, connection) {
   const [rows] = await connection.query('SELECT * FROM accounts WHERE account_id = ?', [accountId]);
@@ -51,11 +53,15 @@ export async function deposit({ accountId, amount, reference, receiptPhotoUrl, p
       throw httpError(403, 'Cannot perform transactions on a closed account');
     }
     
-    // Check member status - PENDING members can deposit but not withdraw
+    // Check member status
     const member = await findMemberById(account.member_id);
-    if (member && member.status !== 'ACTIVE') {
-      // PENDING members can deposit, but we'll check this in withdraw
-      // For deposits, we allow PENDING members
+    if (member) {
+      // TERMINATED members cannot perform any transactions
+      if (member.status === 'TERMINATED') {
+        throw httpError(403, 'Member account is TERMINATED. Please contact manager for reactivation.');
+      }
+      // ACTIVE, PENDING, INACTIVE members can deposit
+      // We'll update their activity date
     }
     
     const newBalance = Number(account.balance) + numericAmount;
@@ -84,6 +90,16 @@ export async function deposit({ accountId, amount, reference, receiptPhotoUrl, p
       entityId: accountId,
       metadata: { amount: numericAmount, reference }
     });
+    
+    // Update monthly balance tracking for interest calculation (outside transaction)
+    await updateMonthlyBalanceTracking(accountId, newBalance, 'DEPOSIT');
+    
+    // Update member activity tracking (outside transaction)
+    const accountData = await query('SELECT member_id FROM accounts WHERE account_id = ?', [accountId]);
+    if (accountData && accountData[0]) {
+      await updateMemberActivity(accountData[0].member_id);
+    }
+    
     return txn;
   });
 }
@@ -109,10 +125,21 @@ export async function withdraw({ accountId, amount, reference, receiptPhotoUrl, 
       throw httpError(403, 'Cannot perform transactions on a closed account');
     }
     
-    // Check member status - PENDING members cannot withdraw
+    // Check member status
     const member = await findMemberById(account.member_id);
-    if (member && member.status !== 'ACTIVE') {
-      throw httpError(403, 'Cannot withdraw. Member account is not active. Deposits are allowed.');
+    if (member) {
+      // TERMINATED members cannot perform any transactions
+      if (member.status === 'TERMINATED') {
+        throw httpError(403, 'Member account is TERMINATED. Please contact manager for reactivation.');
+      }
+      // INACTIVE members can deposit and repay loans, but CANNOT withdraw
+      if (member.status === 'INACTIVE') {
+        throw httpError(403, 'Cannot withdraw. Member account is INACTIVE due to inactivity. Please contact manager for reactivation. Deposits are allowed.');
+      }
+      // PENDING members also cannot withdraw
+      if (member.status !== 'ACTIVE') {
+        throw httpError(403, 'Cannot withdraw. Member account is not ACTIVE. Deposits are allowed.');
+      }
     }
     
     const available = Number(account.balance) - Number(account.lien_amount || 0);
@@ -145,6 +172,16 @@ export async function withdraw({ accountId, amount, reference, receiptPhotoUrl, 
       entityId: accountId,
       metadata: { amount: numericAmount, reference }
     });
+    
+    // Update monthly balance tracking for interest calculation (outside transaction)
+    await updateMonthlyBalanceTracking(accountId, newBalance, 'WITHDRAWAL');
+    
+    // Update member activity tracking (outside transaction)
+    const accountData = await query('SELECT member_id FROM accounts WHERE account_id = ?', [accountId]);
+    if (accountData && accountData[0]) {
+      await updateMemberActivity(accountData[0].member_id);
+    }
+    
     return txn;
   });
 }

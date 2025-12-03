@@ -12,7 +12,9 @@ import {
   handleDeleteMember,
   handleActivateMember,
   handleSuspendMember,
-  handleResetMemberPassword
+  handleResetMemberPassword,
+  handleReactivateMember,
+  handleGetInactiveReport
 } from './member.controller.js';
 
 const router = Router();
@@ -70,6 +72,22 @@ router.post(
     { name: 'id_back', maxCount: 1 }
   ]),
   handleAddBeneficiary
+);
+
+// Member reactivation (Manager/Admin only)
+router.post(
+  '/:id/reactivate',
+  authenticate,
+  requireRoles('ADMIN', 'MANAGER'),
+  handleReactivateMember
+);
+
+// Get inactive members report
+router.get(
+  '/inactive-report',
+  authenticate,
+  requireRoles('ADMIN', 'MANAGER'),
+  handleGetInactiveReport
 );
 
 export default router;

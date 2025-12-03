@@ -32,7 +32,7 @@ function fileFilter(_req, file, cb) {
   
   // Also check file extension as fallback
   const ext = path.extname(file.originalname || '').toLowerCase();
-  const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+  const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx'];
   
   // Check if MIME type is allowed (after normalization) OR extension is allowed
   const isMimeAllowed = config.uploads.allowedMimeTypes.some(allowed => {

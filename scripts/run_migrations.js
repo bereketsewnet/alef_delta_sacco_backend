@@ -28,6 +28,27 @@ async function ensureDatabase() {
   }
 }
 
+async function ensureMigrationsTable(connection) {
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      migration_name VARCHAR(255) PRIMARY KEY,
+      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB
+  `);
+}
+
+async function getAppliedMigrations(connection) {
+  const [rows] = await connection.query('SELECT migration_name FROM schema_migrations');
+  return new Set(rows.map(row => row.migration_name));
+}
+
+async function markMigrationApplied(connection, migrationName) {
+  await connection.query(
+    'INSERT INTO schema_migrations (migration_name) VALUES (?)',
+    [migrationName]
+  );
+}
+
 export async function runMigrations() {
   console.log('📦 Starting database migrations...');
   console.log(`📁 Migrations directory: ${migrationsDir}`);
@@ -48,12 +69,35 @@ export async function runMigrations() {
   
   const connection = await mysql.createConnection(config.db);
   try {
+    // Ensure migrations tracking table exists
+    await ensureMigrationsTable(connection);
+    
+    // Get already applied migrations
+    const appliedMigrations = await getAppliedMigrations(connection);
+    console.log(`📊 Already applied: ${appliedMigrations.size} migration(s)`);
+    
+    let appliedCount = 0;
+    let skippedCount = 0;
+    
     for (const file of files) {
+      if (appliedMigrations.has(file)) {
+        console.log(`⏭️  Skipping (already applied): ${file}`);
+        skippedCount++;
+        continue;
+      }
+      
       const sql = await fs.readFile(path.join(migrationsDir, file), 'utf8');
       console.log(`▶️  Running migration: ${file}`);
       await runSql(connection, sql);
+      await markMigrationApplied(connection, file);
       console.log(`✅ Completed: ${file}`);
+      appliedCount++;
     }
+    
+    console.log(`\n📈 Migration summary:`);
+    console.log(`   - Applied: ${appliedCount}`);
+    console.log(`   - Skipped: ${skippedCount}`);
+    console.log(`   - Total:   ${files.length}`);
   } catch (error) {
     console.error(`❌ Error in migration: ${error.message}`);
     throw error;

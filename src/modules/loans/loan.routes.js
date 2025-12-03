@@ -26,19 +26,19 @@ router.post('/', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'
 router.post(
   '/:id/check-eligibility',
   authenticate,
-  requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'),
+  requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER', 'TELLER'), // Teller needs this to view loan details
   handleCheckEligibility
 );
 router.post(
   '/:id/approve',
   authenticate,
-  requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'),
+  requireRoles('ADMIN', 'MANAGER'), // Only MANAGER and ADMIN can approve loans
   handleApproveLoan
 );
 router.put(
   '/:id/status',
   authenticate,
-  requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'),
+  requireRoles('ADMIN', 'MANAGER'), // Only MANAGER and ADMIN can update status (reject/approve)
   handleUpdateLoanStatus
 );
 router.get('/:id/schedule', authenticate, requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'), handleGetSchedule);
@@ -60,7 +60,7 @@ router.post(
   authenticate,
   requireRoles('ADMIN', 'CREDIT_OFFICER', 'MANAGER'),
   attachUploadContext('collateral', (req) => req.params.id),
-  upload.fields([{ name: 'document', maxCount: 1 }]),
+  upload.fields([{ name: 'documents', maxCount: 10 }]), // Allow up to 10 documents
   handleAddCollateral
 );
 

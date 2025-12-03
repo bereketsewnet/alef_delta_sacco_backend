@@ -8,7 +8,7 @@ export const createLoanSchema = Joi.object({
   interest_rate: Joi.number().positive().optional(),
   interest_type: Joi.string().valid('FLAT', 'DECLINING').optional(),
   purpose_description: Joi.string().required(),
-  repayment_frequency: Joi.string().valid('MONTHLY', 'WEEKLY').default('MONTHLY')
+  repayment_frequency: Joi.string().valid('MONTHLY', 'WEEKLY', 'QUARTERLY').default('MONTHLY')
 });
 
 export const approveLoanSchema = Joi.object({

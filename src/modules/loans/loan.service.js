@@ -16,6 +16,7 @@ import { insertAuditLog } from '../admin/audit.repository.js';
 import { addGuarantor } from '../guarantors/guarantor.repository.js';
 import { addCollateral } from '../collateral/collateral.repository.js';
 import { toPublicUrl } from '../../core/utils/fileStorage.js';
+import { initializeLoanBalance } from '../loan-repayments/repayment.service.js';
 import {
   calculateInstallment,
   runGatekeeper,
@@ -72,8 +73,8 @@ export async function checkLoanEligibility(loanId) {
 }
 
 export async function approveLoan(loanId, payload, actor) {
-  if (!['ADMIN', 'MANAGER', 'CREDIT_OFFICER'].includes(actor.role)) {
-    throw httpError(403, 'Only credit roles can approve loans');
+  if (!['ADMIN', 'MANAGER'].includes(actor.role)) {
+    throw httpError(403, 'Only MANAGER or ADMIN can approve loans');
   }
   const loan = await findLoanById(loanId);
   if (!loan) {
@@ -117,7 +118,13 @@ export async function approveLoan(loanId, payload, actor) {
       entityId: loanId,
       metadata: payload
     });
-    return findLoanById(loanId, connection);
+    
+    const approvedLoan = await findLoanById(loanId, connection);
+    
+    // Initialize loan balance for repayment tracking (inside same transaction)
+    await initializeLoanBalance(loanId, connection);
+    
+    return approvedLoan;
   });
 }
 
@@ -126,8 +133,8 @@ export function buildSchedule({ loan, startDate }) {
 }
 
 export async function updateLoanStatus(loanId, status, actor) {
-  if (!['ADMIN', 'MANAGER', 'CREDIT_OFFICER'].includes(actor.role)) {
-    throw httpError(403, 'Only credit roles can update loan status');
+  if (!['ADMIN', 'MANAGER'].includes(actor.role)) {
+    throw httpError(403, 'Only MANAGER or ADMIN can update loan status');
   }
   const loan = await findLoanById(loanId);
   if (!loan) {
@@ -199,13 +206,33 @@ export async function addLoanGuarantor(loanId, payload, files) {
 
 export async function addLoanCollateral(loanId, payload, files) {
   await getLoanOrFail(loanId);
+  
+  // Process multiple documents
+  const documents = [];
+  if (files?.documents && files.documents.length > 0) {
+    for (const file of files.documents) {
+      documents.push({
+        url: toPublicUrl(file.path),
+        filename: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        uploaded_at: new Date().toISOString()
+      });
+    }
+  }
+  
+  // Documents are required - throw error if none provided
+  if (documents.length === 0) {
+    throw httpError(400, 'At least one document is required for collateral');
+  }
+  
   await addCollateral({
     collateral_id: uuid(),
     loan_id: loanId,
     type: payload.type,
     description: payload.description,
     estimated_value: payload.estimated_value,
-    document_url: files?.document?.[0] ? toPublicUrl(files.document[0].path) : null
+    documents: JSON.stringify(documents)
   });
   return { success: true };
 }

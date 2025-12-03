@@ -1,5 +1,4 @@
 -- Add indexes for performance
--- Note: Run db:reset to drop all tables and recreate from scratch if indexes already exist
 
 CREATE INDEX idx_members_phone ON members(phone_primary);
 CREATE INDEX idx_accounts_member ON accounts(member_id);
