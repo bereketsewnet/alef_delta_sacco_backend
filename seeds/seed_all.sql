@@ -34,7 +34,7 @@ VALUES
 -- Sample Members (Password: Demo1234)
 INSERT INTO members (member_id, membership_no, first_name, middle_name, last_name, phone_primary, email, gender, marital_status, address_subcity, address_woreda, address_house_no, member_type, monthly_income, tin_number, status, profile_photo_url, id_card_url, password_hash)
 VALUES
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'MEM-2024-0001', 'Bereket', 'Gedamu', 'Sewnet', '+251965500539', 'bereket@example.com', 'MALE', 'MARRIED', 'Bole', '04', '123', 'GOV_EMP', 35000.00, 'TIN-001', 'ACTIVE', NULL, NULL, '$2b$12$AEAxdvFJDg16I/KtC8xfU.UQCAcTySGjXlVWUpqrtp5ARIM33ZxIC'),
+('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'MEM-2024-0001', 'Bereket', 'Gedamu', 'Sewnet', '+251965500639', 'bereket@example.com', 'MALE', 'MARRIED', 'Bole', '04', '123', 'GOV_EMP', 35000.00, 'TIN-001', 'ACTIVE', NULL, NULL, '$2b$12$AEAxdvFJDg16I/KtC8xfU.UQCAcTySGjXlVWUpqrtp5ARIM33ZxIC'),
 ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'MEM-2024-0002', 'Alemitu', NULL, 'Tesfaye', '+251965500540', 'alemitu@example.com', 'FEMALE', 'SINGLE', 'Yeka', '05', '456', 'SME', 45000.00, 'TIN-002', 'ACTIVE', NULL, NULL, '$2b$12$AEAxdvFJDg16I/KtC8xfU.UQCAcTySGjXlVWUpqrtp5ARIM33ZxIC');
 
 -- Sample Accounts for Members

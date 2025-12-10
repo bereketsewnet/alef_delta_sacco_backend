@@ -220,47 +220,81 @@ export async function updateMonthlyBalanceTracking(accountId, newBalance, txnTyp
   const today = dayjs();
   const firstOfMonth = today.startOf('month');
   
-  // Get current account state
-  const accounts = await query('SELECT * FROM accounts WHERE account_id = ?', [accountId]);
-  const account = accounts[0];
+  // Retry logic for lock timeout (max 3 retries with exponential backoff)
+  const maxRetries = 3;
+  let retryCount = 0;
   
-  if (!account) return;
-  
-  const currentBalance = Number(newBalance);
-  const monthOpening = account.month_opening_balance;
-  const monthMinimum = account.month_minimum_balance;
-  
-  // If last interest date is before this month, reset tracking
-  const lastInterestDate = account.last_interest_date ? dayjs(account.last_interest_date) : null;
-  const needsReset = !lastInterestDate || lastInterestDate.isBefore(firstOfMonth);
-  
-  let newOpening = monthOpening;
-  let newMinimum = monthMinimum;
-  
-  if (needsReset) {
-    // First transaction of the month - set both to current balance
-    newOpening = currentBalance;
-    newMinimum = currentBalance;
-  } else {
-    // Mid-month transaction
-    newOpening = monthOpening !== null ? monthOpening : currentBalance;
-    
-    // Update minimum if this balance is lower
-    if (monthMinimum === null || currentBalance < monthMinimum) {
-      newMinimum = currentBalance;
-    } else {
-      newMinimum = monthMinimum;
+  while (retryCount < maxRetries) {
+    try {
+      // Get current account state
+      const accounts = await query('SELECT * FROM accounts WHERE account_id = ?', [accountId]);
+      const account = accounts[0];
+      
+      if (!account) return;
+      
+      const currentBalance = Number(newBalance);
+      const monthOpening = account.month_opening_balance;
+      const monthMinimum = account.month_minimum_balance;
+      
+      // If last interest date is before this month, reset tracking
+      const lastInterestDate = account.last_interest_date ? dayjs(account.last_interest_date) : null;
+      const needsReset = !lastInterestDate || lastInterestDate.isBefore(firstOfMonth);
+      
+      let newOpening = monthOpening;
+      let newMinimum = monthMinimum;
+      
+      if (needsReset) {
+        // First transaction of the month - set both to current balance
+        newOpening = currentBalance;
+        newMinimum = currentBalance;
+      } else {
+        // Mid-month transaction
+        newOpening = monthOpening !== null ? monthOpening : currentBalance;
+        
+        // Update minimum if this balance is lower
+        if (monthMinimum === null || currentBalance < monthMinimum) {
+          newMinimum = currentBalance;
+        } else {
+          newMinimum = monthMinimum;
+        }
+      }
+      
+      // Update tracking fields - this may timeout if another transaction is updating the same account
+      await execute(`
+        UPDATE accounts 
+        SET 
+          month_opening_balance = ?,
+          month_minimum_balance = ?
+        WHERE account_id = ?
+      `, [newOpening, newMinimum, accountId]);
+      
+      // Success - exit retry loop
+      return;
+    } catch (error) {
+      retryCount++;
+      
+      // If it's a lock timeout and we have retries left, wait and retry
+      if ((error.code === 'ER_LOCK_WAIT_TIMEOUT' || error.errno === 1205) && retryCount < maxRetries) {
+        const waitTime = Math.min(100 * Math.pow(2, retryCount - 1), 500); // Exponential backoff: 100ms, 200ms, 400ms (max 500ms)
+        logger.warn(`Lock timeout on account ${accountId}, retrying (${retryCount}/${maxRetries}) after ${waitTime}ms`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+      
+      // If it's not a lock timeout or we're out of retries, log warning but don't fail the deposit
+      // This is a non-critical update that can be retried later
+      logger.error('Error updating monthly balance tracking (non-critical)', { 
+        accountId, 
+        error: error.message,
+        errorCode: error.code,
+        retryCount 
+      });
+      
+      // Don't throw - allow deposit to succeed even if tracking update fails
+      // The tracking can be recalculated during interest posting
+      return;
     }
   }
-  
-  // Update tracking fields
-  await execute(`
-    UPDATE accounts 
-    SET 
-      month_opening_balance = ?,
-      month_minimum_balance = ?
-    WHERE account_id = ?
-  `, [newOpening, newMinimum, accountId]);
 }
 
 /**

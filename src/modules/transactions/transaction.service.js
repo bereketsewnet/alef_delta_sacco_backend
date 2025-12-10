@@ -83,21 +83,28 @@ export async function deposit({ accountId, amount, reference, receiptPhotoUrl, p
       idempotency_key: idempotencyKey
     };
     await insertTransaction(txn, connection);
-    await insertAuditLog({
+    
+    // Audit log (non-blocking for faster response)
+    insertAuditLog({
       userId: performedBy !== 'SYSTEM' ? performedBy : null,
       action: 'DEPOSIT',
       entity: 'accounts',
       entityId: accountId,
       metadata: { amount: numericAmount, reference }
+    }).catch(err => {
+      console.error('Failed to insert audit log for deposit:', err);
     });
     
-    // Update monthly balance tracking for interest calculation (outside transaction)
-    await updateMonthlyBalanceTracking(accountId, newBalance, 'DEPOSIT');
+    // Update monthly balance tracking for interest calculation (fire-and-forget for faster response)
+    updateMonthlyBalanceTracking(accountId, newBalance, 'DEPOSIT').catch(err => {
+      console.error('Failed to update monthly balance tracking:', err);
+    });
     
-    // Update member activity tracking (outside transaction)
-    const accountData = await query('SELECT member_id FROM accounts WHERE account_id = ?', [accountId]);
-    if (accountData && accountData[0]) {
-      await updateMemberActivity(accountData[0].member_id);
+    // Update member activity tracking (fire-and-forget for faster response)
+    if (account.member_id) {
+      updateMemberActivity(account.member_id).catch(err => {
+        console.error('Failed to update member activity:', err);
+      });
     }
     
     return txn;
@@ -177,9 +184,9 @@ export async function withdraw({ accountId, amount, reference, receiptPhotoUrl, 
     await updateMonthlyBalanceTracking(accountId, newBalance, 'WITHDRAWAL');
     
     // Update member activity tracking (outside transaction)
-    const accountData = await query('SELECT member_id FROM accounts WHERE account_id = ?', [accountId]);
-    if (accountData && accountData[0]) {
-      await updateMemberActivity(accountData[0].member_id);
+    // We already have account.member_id from line 118, no need to query again
+    if (account.member_id) {
+      await updateMemberActivity(account.member_id);
     }
     
     return txn;

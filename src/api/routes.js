@@ -16,6 +16,7 @@ import loanProductRoutes from '../modules/loan-products/loan-product.routes.js';
 import accountProductRoutes from '../modules/account-products/account-product.routes.js';
 import systemRoutes from '../modules/system/system.routes.js';
 import clientRoutes from '../modules/client/client.routes.js';
+import depositRequestRoutes from '../modules/deposit-requests/deposit-request.routes.js';
 import { healthCheck } from '../core/db.js';
 
 const router = Router();
@@ -45,6 +46,9 @@ router.use('/', loanRepaymentRoutes); // Loan repayments (mounted at root for /l
 
 // Client-facing endpoints (Telegram Mini App)
 router.use('/client', clientRoutes);
+
+// Deposit requests (accessible by both members and staff)
+router.use('/deposit-requests', depositRequestRoutes);
 
 export default router;
 

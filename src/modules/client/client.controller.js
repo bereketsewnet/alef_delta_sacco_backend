@@ -2,6 +2,7 @@ import {
   getClientProfile,
   getClientAccounts,
   getClientAccountTransactions,
+  getClientTransactions,
   getClientLoans,
   getClientLoanSchedule
 } from './client.service.js';
@@ -29,6 +30,18 @@ export async function handleGetAccountTransactions(req, res, next) {
     const transactions = await getClientAccountTransactions(
       req.user.memberId,
       req.params.accountId,
+      { limit: req.query.limit, offset: req.query.offset }
+    );
+    res.json({ data: transactions });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleGetTransactions(req, res, next) {
+  try {
+    const transactions = await getClientTransactions(
+      req.user.memberId,
       { limit: req.query.limit, offset: req.query.offset }
     );
     res.json({ data: transactions });

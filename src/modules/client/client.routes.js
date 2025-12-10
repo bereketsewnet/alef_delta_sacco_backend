@@ -4,9 +4,11 @@ import {
   handleGetProfile,
   handleGetAccounts,
   handleGetAccountTransactions,
+  handleGetTransactions,
   handleGetLoans,
   handleGetLoanSchedule
 } from './client.controller.js';
+import depositRequestRoutes from '../deposit-requests/deposit-request.routes.js';
 
 const router = Router();
 
@@ -24,10 +26,14 @@ router.get('/me', authenticate, requireMember, handleGetProfile);
 // Client accounts
 router.get('/accounts', authenticate, requireMember, handleGetAccounts);
 router.get('/accounts/:accountId/transactions', authenticate, requireMember, handleGetAccountTransactions);
+router.get('/transactions', authenticate, requireMember, handleGetTransactions);
 
 // Client loans
 router.get('/loans', authenticate, requireMember, handleGetLoans);
 router.get('/loans/:loanId/schedule', authenticate, requireMember, handleGetLoanSchedule);
+
+// Deposit requests
+router.use('/deposit-requests', authenticate, requireMember, depositRequestRoutes);
 
 export default router;
 

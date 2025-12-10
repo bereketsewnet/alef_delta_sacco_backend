@@ -132,7 +132,8 @@ export async function listTransactionsByMember(memberId, filters = {}) {
       t.idempotency_key,
       a.product_code,
       a.member_id,
-      u.username as performed_by_username
+      u.username as performed_by_username,
+      u.role as performed_by_role
      FROM transactions t
      JOIN accounts a ON t.account_id = a.account_id
      LEFT JOIN users u ON t.performed_by = u.user_id

@@ -1,7 +1,7 @@
 import httpError from '../../core/utils/httpError.js';
 import { query } from '../../core/db.js';
 import { findMemberById } from '../members/member.repository.js';
-import { listTransactions } from '../transactions/transaction.repository.js';
+import { listTransactions, listTransactionsByMember } from '../transactions/transaction.repository.js';
 
 export async function getClientProfile(memberId) {
   const member = await findMemberById(memberId);
@@ -71,6 +71,15 @@ export async function getClientAccountTransactions(memberId, accountId, filters 
   const offset = filters.offset || 0;
   
   const transactions = await listTransactions({ account_id: accountId, limit, offset });
+  return transactions;
+}
+
+export async function getClientTransactions(memberId, filters = {}) {
+  // Get all transactions for member across all accounts
+  const limit = filters.limit || 20;
+  const offset = filters.offset || 0;
+  
+  const transactions = await listTransactionsByMember(memberId, { limit, offset, ...filters });
   return transactions;
 }
 
