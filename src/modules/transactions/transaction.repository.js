@@ -119,29 +119,74 @@ export async function listTransactionsByMember(memberId, filters = {}) {
   const offset = Number(filters.offset || 0);
   
   try {
-    const sql = `SELECT 
-      t.txn_id,
-      t.account_id,
-      t.txn_type,
-      t.amount,
-      t.balance_after,
-      t.reference,
-      t.receipt_photo_url,
-      t.performed_by,
-      t.created_at,
-      t.idempotency_key,
-      a.product_code,
-      a.member_id,
-      u.username as performed_by_username,
-      u.role as performed_by_role
-     FROM transactions t
-     JOIN accounts a ON t.account_id = a.account_id
-     LEFT JOIN users u ON t.performed_by = u.user_id
-     ${whereClause}
-     ORDER BY t.created_at DESC
-     LIMIT ? OFFSET ?`;
+    // Build loan repayment WHERE clause
+    const loanRepaymentWhere = ['lr.member_id = ?'];
+    const loanRepaymentParams = [memberId];
     
-    const queryParams = [...params, limit, offset];
+    if (filters.date_from) {
+      loanRepaymentWhere.push('DATE(lr.created_at) >= ?');
+      loanRepaymentParams.push(filters.date_from);
+    }
+    if (filters.date_to) {
+      loanRepaymentWhere.push('DATE(lr.created_at) <= ?');
+      loanRepaymentParams.push(filters.date_to);
+    }
+    const loanRepaymentWhereClause = `WHERE ${loanRepaymentWhere.join(' AND ')}`;
+    
+    // Combine regular transactions and loan repayments
+    const sql = `(
+      SELECT 
+        t.txn_id as id,
+        t.account_id,
+        t.txn_type,
+        t.amount,
+        t.balance_after,
+        t.reference,
+        t.receipt_photo_url,
+        t.performed_by,
+        t.created_at,
+        t.idempotency_key,
+        a.product_code,
+        a.member_id,
+        u.username as performed_by_username,
+        u.role as performed_by_role,
+        'TRANSACTION' as source_type,
+        NULL as loan_id,
+        NULL as payment_method
+      FROM transactions t
+      JOIN accounts a ON t.account_id = a.account_id
+      LEFT JOIN users u ON t.performed_by = u.user_id
+      ${whereClause}
+    )
+    UNION ALL
+    (
+      SELECT 
+        lr.repayment_id as id,
+        NULL as account_id,
+        'LOAN_REPAYMENT' as txn_type,
+        lr.amount_paid as amount,
+        lr.balance_after as balance_after,
+        lr.receipt_no as reference,
+        lr.receipt_photo_url,
+        lr.performed_by,
+        lr.created_at,
+        lr.idempotency_key,
+        la.product_code,
+        lr.member_id,
+        u2.username as performed_by_username,
+        u2.role as performed_by_role,
+        'LOAN_REPAYMENT' as source_type,
+        lr.loan_id,
+        lr.payment_method
+      FROM loan_repayments lr
+      JOIN loan_applications la ON lr.loan_id = la.loan_id
+      LEFT JOIN users u2 ON lr.performed_by = u2.user_id
+      ${loanRepaymentWhereClause}
+    )
+    ORDER BY created_at DESC
+    LIMIT ? OFFSET ?`;
+    
+    const queryParams = [...params, ...loanRepaymentParams, limit, offset];
     
     const results = await query(sql, queryParams);
     // Ensure we always return an array

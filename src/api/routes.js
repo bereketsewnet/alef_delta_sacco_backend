@@ -17,6 +17,7 @@ import accountProductRoutes from '../modules/account-products/account-product.ro
 import systemRoutes from '../modules/system/system.routes.js';
 import clientRoutes from '../modules/client/client.routes.js';
 import depositRequestRoutes from '../modules/deposit-requests/deposit-request.routes.js';
+import loanRepaymentRequestRoutes from '../modules/loan-repayment-requests/loan-repayment-request.routes.js';
 import { healthCheck } from '../core/db.js';
 
 const router = Router();
@@ -49,6 +50,9 @@ router.use('/client', clientRoutes);
 
 // Deposit requests (accessible by both members and staff)
 router.use('/deposit-requests', depositRequestRoutes);
+
+// Loan repayment requests (accessible by both members and staff)
+router.use('/loan-repayment-requests', loanRepaymentRequestRoutes);
 
 export default router;
 
