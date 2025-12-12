@@ -124,6 +124,19 @@ export async function approveLoan(loanId, payload, actor) {
     // Initialize loan balance for repayment tracking (inside same transaction)
     await initializeLoanBalance(loanId, connection);
     
+    // Create notification (fire-and-forget for faster response)
+    if (approvedLoan.member_id) {
+      const { NotificationHelpers } = await import('../notifications/notification.service.js');
+      NotificationHelpers.loanApproved(
+        approvedLoan.member_id,
+        loanId,
+        approvedLoan.approved_amount || approvedLoan.applied_amount,
+        approvedLoan.product_code
+      ).catch(err => {
+        console.error('Failed to create loan approval notification:', err);
+      });
+    }
+    
     return approvedLoan;
   });
 }
@@ -159,7 +172,22 @@ export async function updateLoanStatus(loanId, status, actor) {
     entityId: loanId,
     metadata: { status, previous_status: loan.workflow_status }
   });
-  return findLoanById(loanId);
+  
+  const updatedLoan = await findLoanById(loanId);
+  
+  // Create notification for rejection (fire-and-forget for faster response)
+  if (status === 'REJECTED' && updatedLoan.member_id) {
+    const { NotificationHelpers } = await import('../notifications/notification.service.js');
+    NotificationHelpers.loanRejected(
+      updatedLoan.member_id,
+      loanId,
+      null // Reason can be added to metadata if needed
+    ).catch(err => {
+      console.error('Failed to create loan rejection notification:', err);
+    });
+  }
+  
+  return updatedLoan;
 }
 
 export { calculateInstallment } from './gatekeeper.js';

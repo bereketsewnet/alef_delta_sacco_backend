@@ -9,6 +9,7 @@ import {
   handleGetLoanSchedule
 } from './client.controller.js';
 import depositRequestRoutes from '../deposit-requests/deposit-request.routes.js';
+import notificationRoutes from '../notifications/notification.routes.js';
 
 const router = Router();
 
@@ -31,6 +32,9 @@ router.get('/transactions', authenticate, requireMember, handleGetTransactions);
 // Client loans
 router.get('/loans', authenticate, requireMember, handleGetLoans);
 router.get('/loans/:loanId/schedule', authenticate, requireMember, handleGetLoanSchedule);
+
+// Client notifications
+router.use('/notifications', authenticate, requireMember, notificationRoutes);
 
 // Deposit requests
 router.use('/deposit-requests', authenticate, requireMember, depositRequestRoutes);

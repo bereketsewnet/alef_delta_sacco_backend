@@ -107,6 +107,14 @@ export async function deposit({ accountId, amount, reference, receiptPhotoUrl, p
       });
     }
     
+    // Create notification (fire-and-forget for faster response)
+    if (account.member_id) {
+      const { NotificationHelpers } = await import('../notifications/notification.service.js');
+      NotificationHelpers.deposit(account.member_id, numericAmount, accountId, reference).catch(err => {
+        console.error('Failed to create deposit notification:', err);
+      });
+    }
+    
     return txn;
   });
 }
@@ -187,6 +195,14 @@ export async function withdraw({ accountId, amount, reference, receiptPhotoUrl, 
     // We already have account.member_id from line 118, no need to query again
     if (account.member_id) {
       await updateMemberActivity(account.member_id);
+    }
+    
+    // Create notification (fire-and-forget for faster response)
+    if (account.member_id) {
+      const { NotificationHelpers } = await import('../notifications/notification.service.js');
+      NotificationHelpers.withdrawal(account.member_id, numericAmount, accountId, reference).catch(err => {
+        console.error('Failed to create withdrawal notification:', err);
+      });
     }
     
     return txn;

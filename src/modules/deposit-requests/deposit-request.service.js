@@ -166,7 +166,21 @@ export async function approveDepositRequest(requestId, approverId) {
       console.error('Failed to insert audit log for deposit request approval:', err);
     });
 
-    return findDepositRequestById(requestId);
+    const approvedRequest = await findDepositRequestById(requestId);
+    
+    // Create notification (fire-and-forget for faster response)
+    if (approvedRequest.member_id) {
+      const { NotificationHelpers } = await import('../notifications/notification.service.js');
+      NotificationHelpers.depositRequestApproved(
+        approvedRequest.member_id,
+        request.amount,
+        request.account_id
+      ).catch(err => {
+        console.error('Failed to create deposit request approval notification:', err);
+      });
+    }
+
+    return approvedRequest;
   });
 }
 
@@ -194,6 +208,20 @@ export async function rejectDepositRequest(requestId, approverId, reason) {
     metadata: { reason },
   });
 
-  return findDepositRequestById(requestId);
+  const rejectedRequest = await findDepositRequestById(requestId);
+  
+  // Create notification (fire-and-forget for faster response)
+  if (rejectedRequest.member_id) {
+    const { NotificationHelpers } = await import('../notifications/notification.service.js');
+    NotificationHelpers.depositRequestRejected(
+      rejectedRequest.member_id,
+      request.amount,
+      reason
+    ).catch(err => {
+      console.error('Failed to create deposit request rejection notification:', err);
+    });
+  }
+
+  return rejectedRequest;
 }
 

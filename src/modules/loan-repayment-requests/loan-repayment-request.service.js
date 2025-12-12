@@ -60,6 +60,17 @@ export async function createLoanRepaymentRequest(memberId, payload) {
     metadata: { member_id: memberId, amount, loan_id: payload.loan_id },
   });
 
+  // Create notification (fire-and-forget for faster response)
+  const { NotificationHelpers } = await import('../notifications/notification.service.js');
+  NotificationHelpers.loanRepayment(
+    memberId,
+    payload.loan_id,
+    amount,
+    payload.payment_method || 'CASH'
+  ).catch(err => {
+    console.error('Failed to create loan repayment request notification:', err);
+  });
+
   return findLoanRepaymentRequestById(requestId);
 }
 
@@ -179,7 +190,21 @@ export async function approveLoanRepaymentRequest(requestId, approverId) {
       console.error('Failed to insert audit log for loan repayment request approval:', err);
     });
 
-    return findLoanRepaymentRequestById(requestId);
+    const approvedRequest = await findLoanRepaymentRequestById(requestId);
+    
+    // Create notification (fire-and-forget for faster response)
+    if (approvedRequest.member_id) {
+      const { NotificationHelpers } = await import('../notifications/notification.service.js');
+      NotificationHelpers.loanRepaymentApproved(
+        approvedRequest.member_id,
+        request.loan_id,
+        request.amount
+      ).catch(err => {
+        console.error('Failed to create loan repayment approval notification:', err);
+      });
+    }
+
+    return approvedRequest;
   });
 }
 
@@ -207,7 +232,21 @@ export async function rejectLoanRepaymentRequest(requestId, approverId, reason) 
     metadata: { reason },
   });
 
-  return findLoanRepaymentRequestById(requestId);
+  const rejectedRequest = await findLoanRepaymentRequestById(requestId);
+  
+  // Create notification (fire-and-forget for faster response)
+  if (rejectedRequest.member_id) {
+    const { NotificationHelpers } = await import('../notifications/notification.service.js');
+    NotificationHelpers.loanRepaymentRejected(
+      rejectedRequest.member_id,
+      request.loan_id,
+      reason
+    ).catch(err => {
+      console.error('Failed to create loan repayment rejection notification:', err);
+    });
+  }
+
+  return rejectedRequest;
 }
 
 
