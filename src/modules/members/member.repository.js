@@ -80,8 +80,8 @@ export async function createMember(member) {
      marital_status, age, family_size_female, family_size_male, educational_level, occupation,
      work_experience_years, address_subcity, address_woreda, address_kebele, address_area_name,
      address_house_no, national_id_number, shares_requested, terms_accepted, terms_accepted_at,
-     member_type, monthly_income, tin_number, status, profile_photo_url, id_card_url, password_hash, registered_date)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+     member_type, monthly_income, tin_number, status, profile_photo_url, id_card_url, id_card_front_url, id_card_back_url, password_hash, registered_date)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
     [
       member.member_id,
       member.membership_no,
@@ -113,6 +113,8 @@ export async function createMember(member) {
       member.status,
       member.profile_photo_url,
       member.id_card_url,
+      member.id_card_front_url || null,
+      member.id_card_back_url || null,
       member.password_hash
     ]
   );

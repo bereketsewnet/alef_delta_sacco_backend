@@ -56,7 +56,7 @@ function transformMemberPayload(payload) {
   
   // Convert undefined to null for optional fields
   const optionalFields = ['middle_name', 'email', 'address_subcity', 'address_woreda', 'address_house_no', 
-    'tin_number', 'profile_photo_url', 'id_card_url', 'age', 'educational_level', 'occupation', 
+    'tin_number', 'profile_photo_url', 'id_card_url', 'id_card_front_url', 'id_card_back_url', 'age', 'educational_level', 'occupation', 
     'work_experience_years', 'address_kebele', 'address_area_name', 'national_id_number'];
   optionalFields.forEach(field => {
     if (transformed[field] === undefined || transformed[field] === '') {

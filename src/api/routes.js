@@ -20,6 +20,8 @@ import systemRoutes from '../modules/system/system.routes.js';
 import clientRoutes from '../modules/client/client.routes.js';
 import depositRequestRoutes from '../modules/deposit-requests/deposit-request.routes.js';
 import loanRepaymentRequestRoutes from '../modules/loan-repayment-requests/loan-repayment-request.routes.js';
+import memberRegistrationRequestRoutes from '../modules/member-registration-requests/member-registration-request.routes.js';
+import uploadRoutes from '../modules/uploads/upload.routes.js';
 import { healthCheck } from '../core/db.js';
 
 const router = Router();
@@ -57,6 +59,12 @@ router.use('/deposit-requests', depositRequestRoutes);
 
 // Loan repayment requests (accessible by both members and staff)
 router.use('/loan-repayment-requests', loanRepaymentRequestRoutes);
+
+// Member registration requests (self-registration with approval)
+router.use('/member-registration-requests', memberRegistrationRequestRoutes);
+
+// General file uploads (public endpoint for self-registration)
+router.use('/uploads', uploadRoutes);
 
 export default router;
 

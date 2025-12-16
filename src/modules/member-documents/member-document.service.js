@@ -11,7 +11,7 @@ import {
 import { findMemberById } from '../members/member.repository.js';
 import { toPublicUrl } from '../../core/utils/fileStorage.js';
 
-const VALID_DOCUMENT_TYPES = ['KEBELE_ID', 'DRIVER_LICENSE', 'PASSPORT', 'WORKER_ID'];
+const VALID_DOCUMENT_TYPES = ['KEBELE_ID', 'DRIVER_LICENSE', 'PASSPORT', 'WORKER_ID', 'REGISTRATION_RECEIPT'];
 
 export async function getMemberDocuments(memberId, documentType = null) {
   const member = await findMemberById(memberId);

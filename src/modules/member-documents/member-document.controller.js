@@ -10,7 +10,7 @@ import {
 } from './member-document.service.js';
 
 const documentSchema = Joi.object({
-  document_type: Joi.string().valid('KEBELE_ID', 'DRIVER_LICENSE', 'PASSPORT', 'WORKER_ID').required(),
+  document_type: Joi.string().valid('KEBELE_ID', 'DRIVER_LICENSE', 'PASSPORT', 'WORKER_ID', 'REGISTRATION_RECEIPT').required(),
   document_number: Joi.string().allow(null, '')
 });
 
