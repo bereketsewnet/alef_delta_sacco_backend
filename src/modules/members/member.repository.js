@@ -77,9 +77,11 @@ export async function createMember(member) {
   await execute(
     `INSERT INTO members
     (member_id, membership_no, first_name, middle_name, last_name, phone_primary, email, gender,
-     marital_status, address_subcity, address_woreda, address_house_no, member_type, monthly_income,
-     tin_number, status, profile_photo_url, id_card_url, password_hash, registered_date)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+     marital_status, age, family_size_female, family_size_male, educational_level, occupation,
+     work_experience_years, address_subcity, address_woreda, address_kebele, address_area_name,
+     address_house_no, national_id_number, shares_requested, terms_accepted, terms_accepted_at,
+     member_type, monthly_income, tin_number, status, profile_photo_url, id_card_url, password_hash, registered_date)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
     [
       member.member_id,
       member.membership_no,
@@ -90,9 +92,21 @@ export async function createMember(member) {
       member.email,
       member.gender,
       member.marital_status,
+      member.age || null,
+      member.family_size_female || 0,
+      member.family_size_male || 0,
+      member.educational_level || null,
+      member.occupation || null,
+      member.work_experience_years || null,
       member.address_subcity,
       member.address_woreda,
+      member.address_kebele || null,
+      member.address_area_name || null,
       member.address_house_no,
+      member.national_id_number || null,
+      member.shares_requested || 0,
+      member.terms_accepted ? 1 : 0,
+      member.terms_accepted_at || null,
       member.member_type,
       member.monthly_income,
       member.tin_number,

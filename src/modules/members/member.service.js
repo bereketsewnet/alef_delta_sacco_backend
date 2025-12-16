@@ -55,12 +55,33 @@ function transformMemberPayload(payload) {
   // INDIVIDUAL, GOV_EMP, NGO, SME are already correct
   
   // Convert undefined to null for optional fields
-  const optionalFields = ['middle_name', 'email', 'address_subcity', 'address_woreda', 'address_house_no', 'tin_number', 'profile_photo_url', 'id_card_url'];
+  const optionalFields = ['middle_name', 'email', 'address_subcity', 'address_woreda', 'address_house_no', 
+    'tin_number', 'profile_photo_url', 'id_card_url', 'age', 'educational_level', 'occupation', 
+    'work_experience_years', 'address_kebele', 'address_area_name', 'national_id_number'];
   optionalFields.forEach(field => {
     if (transformed[field] === undefined || transformed[field] === '') {
       transformed[field] = null;
     }
   });
+  
+  // Set default values for family size
+  if (transformed.family_size_female === undefined || transformed.family_size_female === null) {
+    transformed.family_size_female = 0;
+  }
+  if (transformed.family_size_male === undefined || transformed.family_size_male === null) {
+    transformed.family_size_male = 0;
+  }
+  if (transformed.shares_requested === undefined || transformed.shares_requested === null) {
+    transformed.shares_requested = 0;
+  }
+  
+  // Handle terms acceptance
+  if (transformed.terms_accepted === true) {
+    transformed.terms_accepted_at = new Date();
+  } else {
+    transformed.terms_accepted = false;
+    transformed.terms_accepted_at = null;
+  }
   
   // Ensure status has a default - new members are PENDING until manager activates them
   if (!transformed.status) {
