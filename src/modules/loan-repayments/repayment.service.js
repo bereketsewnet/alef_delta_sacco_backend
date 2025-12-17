@@ -7,7 +7,9 @@ import {
   createRepayment, 
   listRepaymentsByLoan, 
   listRepaymentsByMember,
+  findRepaymentById,
   getRepaymentSummary,
+  updateRepayment,
   updateLoanBalanceFields 
 } from './repayment.repository.js';
 import { 
@@ -27,7 +29,7 @@ import { updateMemberActivity } from '../members/member-lifecycle-processor.js';
 /**
  * Process a loan repayment
  * @param {string} loanId
- * @param {Object} payload - { amount, payment_method, receipt_no, notes }
+ * @param {Object} payload - { amount, payment_method, bank_receipt_no, company_receipt_no, receipt_no, notes }
  * @param {Object} files - Uploaded receipt photo
  * @param {Object} actor - User making the payment
  * @returns {Object} - Repayment record with calculation details
@@ -65,6 +67,16 @@ export async function processLoanRepayment(loanId, payload, files, actor) {
   if (paymentAmount <= 0) {
     throw httpError(400, 'Payment amount must be greater than zero');
   }
+
+  // Bank receipt is required for the staff payment flow
+  const bankReceiptNo = (payload.bank_receipt_no || '').toString().trim();
+  const bankReceiptFile = files?.bank_receipt?.[0] || null;
+  if (!bankReceiptNo) {
+    throw httpError(400, 'Bank receipt number is required');
+  }
+  if (!bankReceiptFile) {
+    throw httpError(400, 'Bank receipt photo is required');
+  }
   
   // Allocate payment
   const allocation = allocatePayment(paymentAmount, loan, penaltyInfo.penaltyAmount);
@@ -89,8 +101,13 @@ export async function processLoanRepayment(loanId, payload, files, actor) {
       balance_before: Number(outstandingBalance),
       balance_after: Number(balanceAfter),
       payment_method: payload.payment_method || 'CASH',
-      receipt_no: payload.receipt_no || null,
-      receipt_photo_url: files?.receipt?.[0] ? toPublicUrl(files.receipt[0].path) : null,
+      bank_receipt_no: bankReceiptNo,
+      bank_receipt_photo_url: bankReceiptFile ? toPublicUrl(bankReceiptFile.path) : null,
+      // Company receipt (optional) is stored in existing receipt_no/receipt_photo_url columns
+      receipt_no: (payload.company_receipt_no || payload.receipt_no || null),
+      receipt_photo_url: (files?.company_receipt?.[0] || files?.receipt?.[0])
+        ? toPublicUrl((files?.company_receipt?.[0] || files?.receipt?.[0]).path)
+        : null,
       notes: payload.notes || null,
       performed_by: actor.userId,
       idempotency_key: payload.idempotency_key || null
@@ -198,6 +215,38 @@ export async function getLoanPaymentSummary(loanId) {
  */
 export async function getLoanRepaymentHistory(loanId) {
   return listRepaymentsByLoan(loanId);
+}
+
+/**
+ * Update repayment receipt info (staff only)
+ */
+export async function updateLoanRepaymentReceiptInfo(repaymentId, payload, files, actor) {
+  // Only staff roles should reach here (enforced in route)
+  const existing = await findRepaymentById(repaymentId);
+  if (!existing) {
+    throw httpError(404, 'Repayment not found');
+  }
+
+  const updates = {};
+
+  if (payload.bank_receipt_no !== undefined) {
+    updates.bank_receipt_no = payload.bank_receipt_no ? String(payload.bank_receipt_no).trim() : null;
+  }
+  if (payload.company_receipt_no !== undefined) {
+    updates.receipt_no = payload.company_receipt_no ? String(payload.company_receipt_no).trim() : null;
+  }
+
+  const bankReceiptFile = files?.bank_receipt?.[0] || null;
+  const companyReceiptFile = files?.company_receipt?.[0] || null;
+
+  if (bankReceiptFile) {
+    updates.bank_receipt_photo_url = toPublicUrl(bankReceiptFile.path);
+  }
+  if (companyReceiptFile) {
+    updates.receipt_photo_url = toPublicUrl(companyReceiptFile.path);
+  }
+
+  return updateRepayment(repaymentId, updates);
 }
 
 /**

@@ -1,4 +1,5 @@
 import { query, execute } from '../../core/db.js';
+import httpError from '../../core/utils/httpError.js';
 
 export async function createRepayment(repayment, connection) {
   const conn = connection || null;
@@ -6,8 +7,9 @@ export async function createRepayment(repayment, connection) {
     `INSERT INTO loan_repayments 
     (repayment_id, loan_id, member_id, payment_date, amount_paid, principal_paid, 
      interest_paid, penalty_paid, balance_before, balance_after, payment_method, 
+     bank_receipt_no, bank_receipt_photo_url,
      receipt_no, receipt_photo_url, notes, performed_by, idempotency_key)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       repayment.repayment_id,
       repayment.loan_id,
@@ -20,6 +22,8 @@ export async function createRepayment(repayment, connection) {
       repayment.balance_before,
       repayment.balance_after,
       repayment.payment_method,
+      repayment.bank_receipt_no,
+      repayment.bank_receipt_photo_url,
       repayment.receipt_no,
       repayment.receipt_photo_url,
       repayment.notes,
@@ -35,6 +39,43 @@ export async function listRepaymentsByLoan(loanId) {
     'SELECT * FROM loan_repayments WHERE loan_id = ? ORDER BY payment_date DESC, created_at DESC',
     [loanId]
   );
+}
+
+export async function findRepaymentById(repaymentId) {
+  const rows = await query('SELECT * FROM loan_repayments WHERE repayment_id = ?', [repaymentId]);
+  return rows?.[0] || null;
+}
+
+export async function updateRepayment(repaymentId, updates, connection) {
+  const conn = connection || null;
+  const allowed = [
+    'bank_receipt_no',
+    'bank_receipt_photo_url',
+    'receipt_no',
+    'receipt_photo_url',
+  ];
+
+  const fields = [];
+  const values = [];
+
+  for (const [key, value] of Object.entries(updates || {})) {
+    if (!allowed.includes(key)) continue;
+    fields.push(`${key} = ?`);
+    values.push(value);
+  }
+
+  if (fields.length === 0) {
+    throw httpError(400, 'No valid fields to update');
+  }
+
+  values.push(repaymentId);
+  const sql = `UPDATE loan_repayments SET ${fields.join(', ')}, created_at = created_at WHERE repayment_id = ?`;
+  if (connection) {
+    await connection.execute(sql, values);
+  } else {
+    await execute(sql, values);
+  }
+  return findRepaymentById(repaymentId);
 }
 
 export async function listRepaymentsByMember(memberId) {

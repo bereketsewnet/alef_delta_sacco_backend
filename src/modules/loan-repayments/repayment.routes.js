@@ -7,7 +7,8 @@ import {
   handleGetPaymentSummary,
   handleGetRepaymentHistory,
   handleGetMemberRepayments,
-  handleCheckAndNotifyPenalty
+  handleCheckAndNotifyPenalty,
+  handleUpdateRepaymentReceipt
 } from './repayment.controller.js';
 
 const router = Router();
@@ -18,7 +19,12 @@ router.post(
   authenticate,
   requireRoles('ADMIN', 'MANAGER', 'TELLER'),
   attachUploadContext('loan-repayments', (req) => req.params.loanId),
-  upload.fields([{ name: 'receipt', maxCount: 1 }]),
+  // Support both legacy `receipt` and new `bank_receipt` + `company_receipt`
+  upload.fields([
+    { name: 'bank_receipt', maxCount: 1 },
+    { name: 'company_receipt', maxCount: 1 },
+    { name: 'receipt', maxCount: 1 },
+  ]),
   handleMakePayment
 );
 
@@ -52,6 +58,19 @@ router.post(
   authenticate,
   requireRoles('ADMIN', 'MANAGER', 'TELLER'),
   handleCheckAndNotifyPenalty
+);
+
+// Update repayment receipt info (staff only)
+router.put(
+  '/loan-repayments/:repaymentId',
+  authenticate,
+  requireRoles('ADMIN', 'MANAGER', 'TELLER'),
+  attachUploadContext('loan-repayments', (req) => req.params.repaymentId),
+  upload.fields([
+    { name: 'bank_receipt', maxCount: 1 },
+    { name: 'company_receipt', maxCount: 1 },
+  ]),
+  handleUpdateRepaymentReceipt
 );
 
 export default router;

@@ -3,7 +3,8 @@ import {
   getLoanPaymentSummary,
   getLoanRepaymentHistory,
   getMemberRepayments,
-  checkPenaltyAndNotify
+  checkPenaltyAndNotify,
+  updateLoanRepaymentReceiptInfo
 } from './repayment.service.js';
 import { repaymentSchema } from './repayment.validators.js';
 import httpError from '../../core/utils/httpError.js';
@@ -62,6 +63,25 @@ export async function handleCheckAndNotifyPenalty(req, res, next) {
   try {
     const result = await checkPenaltyAndNotify(req.params.loanId, req.user);
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleUpdateRepaymentReceipt(req, res, next) {
+  try {
+    const repaymentId = req.params.repaymentId;
+    const payload = {
+      bank_receipt_no: req.body.bank_receipt_no,
+      company_receipt_no: req.body.company_receipt_no,
+    };
+    const updated = await updateLoanRepaymentReceiptInfo(
+      repaymentId,
+      payload,
+      req.files || {},
+      req.user
+    );
+    res.json({ data: updated });
   } catch (error) {
     next(error);
   }
