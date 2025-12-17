@@ -221,6 +221,7 @@ export async function addLoanGuarantor(loanId, payload, files) {
     loan_id: loanId,
     full_name: payload.full_name,
     phone: payload.phone,
+    age: payload.age ? Number(payload.age) : null,
     relationship: payload.relationship || null,
     address: payload.address || null,
     guaranteed_amount: guaranteedAmount,

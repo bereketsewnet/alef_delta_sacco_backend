@@ -105,14 +105,18 @@ export async function getSystemConfig(req, res, next) {
 
 export async function updateSystemConfig(req, res, next) {
   try {
-    const { config_key } = req.params;
+    const { key } = req.params; // Route parameter is :key
     const { config_value } = req.body;
     
-    if (!config_value) {
+    if (!key) {
+      throw new Error('config key is required');
+    }
+    
+    if (config_value === undefined || config_value === null) {
       throw new Error('config_value is required');
     }
     
-    const result = await systemService.updateSystemConfig(config_key, config_value, req.user.userId);
+    const result = await systemService.updateSystemConfig(key, config_value, req.user.userId);
     res.json(result);
   } catch (error) {
     next(error);

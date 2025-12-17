@@ -7,8 +7,8 @@ export async function listGuarantorsByLoan(loanId) {
 export async function addGuarantor(payload) {
   await execute(
     `INSERT INTO guarantors
-    (guarantor_id, loan_id, full_name, phone, relationship, address, guaranteed_amount, id_front_url, id_back_url, profile_photo_url, duty_value)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    (guarantor_id, loan_id, full_name, phone, relationship, address, age, guaranteed_amount, id_front_url, id_back_url, profile_photo_url, duty_value)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       payload.guarantor_id,
       payload.loan_id,
@@ -16,6 +16,7 @@ export async function addGuarantor(payload) {
       payload.phone,
       payload.relationship || null,
       payload.address || null,
+      payload.age || null,
       payload.guaranteed_amount,
       payload.id_front_url || null,
       payload.id_back_url || null,
@@ -44,6 +45,10 @@ export async function updateGuarantor(guarantorId, updates) {
   if (updates.address !== undefined) {
     fields.push('address = ?');
     values.push(updates.address);
+  }
+  if (updates.age !== undefined) {
+    fields.push('age = ?');
+    values.push(updates.age);
   }
   if (updates.guaranteed_amount !== undefined) {
     fields.push('guaranteed_amount = ?');

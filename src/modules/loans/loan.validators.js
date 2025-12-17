@@ -30,6 +30,7 @@ export const installmentSchema = Joi.object({
 export const guarantorSchema = Joi.object({
   full_name: Joi.string().required(),
   phone: Joi.string().required(),
+  age: Joi.number().integer().min(18).max(120).required(),
   relationship: Joi.string().allow(null, '').optional(),
   address: Joi.string().allow(null, '').optional(),
   guaranteed_amount: Joi.number().positive().optional(),

@@ -118,9 +118,14 @@ export async function getAllSystemConfig() {
  * Update system configuration value
  */
 export async function updateSystemConfig(configKey, configValue, updatedBy) {
+  // Ensure all parameters are defined
+  if (!configKey || configValue === undefined || configValue === null) {
+    throw new Error('configKey and configValue are required');
+  }
+  
   await query(
     'UPDATE system_config SET config_value = ?, updated_by = ?, updated_at = NOW() WHERE config_key = ?',
-    [configValue, updatedBy, configKey]
+    [String(configValue), updatedBy || null, configKey]
   );
   
   const [updated] = await query('SELECT * FROM system_config WHERE config_key = ?', [configKey]);
