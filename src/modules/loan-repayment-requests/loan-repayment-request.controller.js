@@ -10,13 +10,27 @@ import {
 
 export async function handleCreateLoanRepaymentRequest(req, res, next) {
   try {
-    const receiptPhotoUrl = req.file ? toPublicUrl(req.file.path) : null;
+    // Support new `bank_receipt` and legacy `receipt`
+    const bankReceiptFile = req.files?.bank_receipt?.[0] || req.files?.receipt?.[0] || null;
+    const receiptPhotoUrl = bankReceiptFile ? toPublicUrl(bankReceiptFile.path) : null;
+    const bankReceiptNo = (req.body.bank_receipt_no || req.body.receipt_number || '').toString().trim();
+
+    // Member portal requires bank receipt number + photo
+    if (req.user.subjectType === 'MEMBER') {
+      if (!bankReceiptNo) {
+        throw httpError(400, 'Bank receipt number is required');
+      }
+      if (!receiptPhotoUrl) {
+        throw httpError(400, 'Bank receipt photo is required');
+      }
+    }
     
     const request = await createLoanRepaymentRequest(req.user.memberId, {
       loan_id: req.body.loan_id,
       amount: req.body.amount,
       payment_method: req.body.payment_method,
-      receipt_number: req.body.receipt_number,
+      // Store bank receipt in existing receipt fields on the request table
+      receipt_number: bankReceiptNo || null,
       receipt_photo_url: receiptPhotoUrl,
       notes: req.body.notes,
     });

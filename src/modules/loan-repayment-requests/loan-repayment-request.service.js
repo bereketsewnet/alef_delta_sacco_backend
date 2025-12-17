@@ -164,10 +164,15 @@ export async function approveLoanRepaymentRequest(requestId, approverId) {
       {
         amount: request.amount,
         payment_method: request.payment_method,
-        receipt_no: request.receipt_number,
+        // Member request stores bank receipt in receipt_number/receipt_photo_url
+        bank_receipt_no: request.receipt_number,
+        bank_receipt_photo_url: request.receipt_photo_url,
+        // Company receipt is added later by staff (optional)
+        company_receipt_no: null,
+        company_receipt_photo_url: null,
         notes: request.notes,
       },
-      request.receipt_photo_url ? { receipt: { path: request.receipt_photo_url } } : null,
+      null,
       { userId: approverId, role: 'TELLER' }
     );
 

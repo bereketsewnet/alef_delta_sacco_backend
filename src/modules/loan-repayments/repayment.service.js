@@ -68,13 +68,14 @@ export async function processLoanRepayment(loanId, payload, files, actor) {
     throw httpError(400, 'Payment amount must be greater than zero');
   }
 
-  // Bank receipt is required for the staff payment flow
+  // Bank receipt is required (either uploaded now, or pre-stored URL e.g. from member repayment request approval)
   const bankReceiptNo = (payload.bank_receipt_no || '').toString().trim();
   const bankReceiptFile = files?.bank_receipt?.[0] || null;
+  const bankReceiptPhotoUrlFromPayload = (payload.bank_receipt_photo_url || '').toString().trim() || null;
   if (!bankReceiptNo) {
     throw httpError(400, 'Bank receipt number is required');
   }
-  if (!bankReceiptFile) {
+  if (!bankReceiptFile && !bankReceiptPhotoUrlFromPayload) {
     throw httpError(400, 'Bank receipt photo is required');
   }
   
@@ -102,12 +103,14 @@ export async function processLoanRepayment(loanId, payload, files, actor) {
       balance_after: Number(balanceAfter),
       payment_method: payload.payment_method || 'CASH',
       bank_receipt_no: bankReceiptNo,
-      bank_receipt_photo_url: bankReceiptFile ? toPublicUrl(bankReceiptFile.path) : null,
+      bank_receipt_photo_url: bankReceiptFile
+        ? toPublicUrl(bankReceiptFile.path)
+        : bankReceiptPhotoUrlFromPayload,
       // Company receipt (optional) is stored in existing receipt_no/receipt_photo_url columns
       receipt_no: (payload.company_receipt_no || payload.receipt_no || null),
       receipt_photo_url: (files?.company_receipt?.[0] || files?.receipt?.[0])
         ? toPublicUrl((files?.company_receipt?.[0] || files?.receipt?.[0]).path)
-        : null,
+        : ((payload.company_receipt_photo_url || '').toString().trim() || null),
       notes: payload.notes || null,
       performed_by: actor.userId,
       idempotency_key: payload.idempotency_key || null

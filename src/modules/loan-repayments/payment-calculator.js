@@ -55,18 +55,18 @@ export function calculateDecliningMonthlyPayment(principal, annualRate, termMont
  * @returns {number} - Current outstanding balance
  */
 export function calculateOutstandingBalance(loan) {
-  const principal = loan.approved_amount || loan.applied_amount;
-  const interestRate = loan.interest_rate;
-  const termMonths = loan.term_months;
-  const totalPaid = loan.total_paid || 0;
-  const totalPenalty = loan.total_penalty || 0;
+  const principal = Number(loan.approved_amount ?? loan.applied_amount ?? 0);
+  const interestRate = Number(loan.interest_rate ?? 0);
+  const termMonths = Number(loan.term_months ?? 1);
+  const totalPaid = Number(loan.total_paid ?? 0);
+  const totalPenalty = Number(loan.total_penalty ?? 0);
   
   if (loan.interest_type === 'FLAT') {
     const totalAmount = calculateFlatTotal(principal, interestRate, termMonths);
-    return totalAmount + totalPenalty - totalPaid;
+    return Number(totalAmount) + totalPenalty - totalPaid;
   } else {
     // DECLINING: Calculate based on remaining principal
-    const principalPaid = loan.total_paid - (loan.total_penalty || 0);
+    const principalPaid = totalPaid - totalPenalty;
     const remainingPrincipal = principal - principalPaid;
     return Math.max(0, remainingPrincipal + totalPenalty);
   }
@@ -78,10 +78,10 @@ export function calculateOutstandingBalance(loan) {
  * @returns {Object} - { principal, interest, total }
  */
 export function calculateExpectedPayment(loan) {
-  const principal = loan.approved_amount || loan.applied_amount;
-  const interestRate = loan.interest_rate;
-  const termMonths = loan.term_months;
-  const paymentsMade = loan.payments_made || 0;
+  const principal = Number(loan.approved_amount ?? loan.applied_amount ?? 0);
+  const interestRate = Number(loan.interest_rate ?? 0);
+  const termMonths = Math.max(1, Number(loan.term_months ?? 1));
+  const paymentsMade = Number(loan.payments_made ?? 0);
   
   if (loan.interest_type === 'FLAT') {
     const monthlyPayment = calculateFlatMonthlyPayment(principal, interestRate, termMonths);
@@ -96,7 +96,7 @@ export function calculateExpectedPayment(loan) {
   } else {
     // DECLINING: Calculate based on remaining balance
     const emi = calculateDecliningMonthlyPayment(principal, interestRate, termMonths);
-    const totalPaidPrincipal = (loan.total_paid || 0) - (loan.total_penalty || 0);
+    const totalPaidPrincipal = Number(loan.total_paid ?? 0) - Number(loan.total_penalty ?? 0);
     const remainingPrincipal = principal - totalPaidPrincipal;
     const monthlyRate = interestRate / 100 / 12;
     const interestPortion = remainingPrincipal * monthlyRate;
@@ -156,7 +156,7 @@ export function calculatePenalty(loan, penaltyRate = 2) {
  * @returns {Object} - { principal, interest, penalty, remaining }
  */
 export function allocatePayment(paymentAmount, loan, currentPenalty = 0) {
-  let remaining = paymentAmount;
+  let remaining = Number(paymentAmount) || 0;
   let penaltyPaid = 0;
   let interestPaid = 0;
   let principalPaid = 0;
@@ -170,14 +170,16 @@ export function allocatePayment(paymentAmount, loan, currentPenalty = 0) {
   // Priority 2: Pay interest
   if (remaining > 0) {
     const expected = calculateExpectedPayment(loan);
-    interestPaid = Math.min(remaining, expected.interest);
+    const expectedInterest = Number(expected?.interest ?? 0);
+    interestPaid = Math.min(remaining, Number.isFinite(expectedInterest) ? expectedInterest : 0);
     remaining -= interestPaid;
   }
   
   // Priority 3: Pay principal
   if (remaining > 0) {
     const outstandingBalance = calculateOutstandingBalance(loan);
-    const maxPrincipal = outstandingBalance - currentPenalty;
+    const ob = Number(outstandingBalance);
+    const maxPrincipal = (Number.isFinite(ob) ? ob : 0) - Number(currentPenalty || 0);
     principalPaid = Math.min(remaining, Math.max(0, maxPrincipal));
     remaining -= principalPaid;
   }

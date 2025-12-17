@@ -16,7 +16,11 @@ router.post(
   '/',
   authenticate,
   attachUploadContext('loan-repayment-requests', (req) => req.user.memberId),
-  upload.single('receipt'),
+  // New: bank receipt fields (keep legacy `receipt` for backward compatibility)
+  upload.fields([
+    { name: 'bank_receipt', maxCount: 1 },
+    { name: 'receipt', maxCount: 1 },
+  ]),
   handleCreateLoanRepaymentRequest
 );
 
