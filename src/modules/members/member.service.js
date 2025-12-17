@@ -9,7 +9,8 @@ import {
   updateMemberPassword,
   resetMemberPassword,
   deleteMember,
-  countMembers
+  countMembers,
+  findMemberByPhone
 } from './member.repository.js';
 import { createBeneficiary, listBeneficiaries } from '../beneficiaries/beneficiary.repository.js';
 import { toPublicUrl } from '../../core/utils/fileStorage.js';
@@ -64,14 +65,46 @@ function transformMemberPayload(payload) {
     }
   });
   
-  // Set default values for family size
-  if (transformed.family_size_female === undefined || transformed.family_size_female === null) {
+  // Convert string numeric values to numbers
+  if (transformed.age !== undefined && transformed.age !== null && transformed.age !== '') {
+    transformed.age = typeof transformed.age === 'string' ? parseInt(transformed.age, 10) : transformed.age;
+    if (isNaN(transformed.age)) transformed.age = null;
+  } else {
+    transformed.age = null;
+  }
+  
+  if (transformed.family_size_female !== undefined && transformed.family_size_female !== null && transformed.family_size_female !== '') {
+    transformed.family_size_female = typeof transformed.family_size_female === 'string' ? parseInt(transformed.family_size_female, 10) : transformed.family_size_female;
+    if (isNaN(transformed.family_size_female)) transformed.family_size_female = 0;
+  } else {
     transformed.family_size_female = 0;
   }
-  if (transformed.family_size_male === undefined || transformed.family_size_male === null) {
+  
+  if (transformed.family_size_male !== undefined && transformed.family_size_male !== null && transformed.family_size_male !== '') {
+    transformed.family_size_male = typeof transformed.family_size_male === 'string' ? parseInt(transformed.family_size_male, 10) : transformed.family_size_male;
+    if (isNaN(transformed.family_size_male)) transformed.family_size_male = 0;
+  } else {
     transformed.family_size_male = 0;
   }
-  if (transformed.shares_requested === undefined || transformed.shares_requested === null) {
+  
+  if (transformed.work_experience_years !== undefined && transformed.work_experience_years !== null && transformed.work_experience_years !== '') {
+    transformed.work_experience_years = typeof transformed.work_experience_years === 'string' ? parseInt(transformed.work_experience_years, 10) : transformed.work_experience_years;
+    if (isNaN(transformed.work_experience_years)) transformed.work_experience_years = null;
+  } else {
+    transformed.work_experience_years = null;
+  }
+  
+  if (transformed.monthly_income !== undefined && transformed.monthly_income !== null && transformed.monthly_income !== '') {
+    transformed.monthly_income = typeof transformed.monthly_income === 'string' ? parseFloat(transformed.monthly_income) : transformed.monthly_income;
+    if (isNaN(transformed.monthly_income)) transformed.monthly_income = 0;
+  } else {
+    transformed.monthly_income = 0;
+  }
+  
+  if (transformed.shares_requested !== undefined && transformed.shares_requested !== null && transformed.shares_requested !== '') {
+    transformed.shares_requested = typeof transformed.shares_requested === 'string' ? parseInt(transformed.shares_requested, 10) : transformed.shares_requested;
+    if (isNaN(transformed.shares_requested)) transformed.shares_requested = 0;
+  } else {
     transformed.shares_requested = 0;
   }
   
@@ -92,18 +125,39 @@ function transformMemberPayload(payload) {
 }
 
 export async function createNewMember(payload) {
+  // Check for duplicate phone number before creating
+  const existingMember = await findMemberByPhone(payload.phone_primary);
+  if (existingMember) {
+    throw httpError(400, `A member with phone number ${payload.phone_primary} already exists. Please use a different phone number.`);
+  }
+  
   const memberId = uuid();
   const passwordHash = await hashPassword(payload.password);
   
   // Transform frontend values to database format
   const transformedPayload = transformMemberPayload(payload);
   
-  await createMember({
-    ...transformedPayload,
-    member_id: memberId,
-    membership_no: generateMembershipNumber(),
-    password_hash: passwordHash
-  });
+  try {
+    await createMember({
+      ...transformedPayload,
+      member_id: memberId,
+      membership_no: generateMembershipNumber(),
+      password_hash: passwordHash
+    });
+  } catch (error) {
+    // Handle unique constraint errors with better messages
+    if (error.name === 'SequelizeUniqueConstraintError' || error.message?.includes('Duplicate entry')) {
+      if (error.message?.includes('phone_primary') || error.fields?.includes('phone_primary')) {
+        throw httpError(400, `A member with phone number ${payload.phone_primary} already exists. Please use a different phone number.`);
+      } else if (error.message?.includes('membership_no') || error.fields?.includes('membership_no')) {
+        throw httpError(400, 'Membership number conflict. Please try again.');
+      } else {
+        throw httpError(400, 'A member with this information already exists. Please check for duplicates.');
+      }
+    }
+    throw error;
+  }
+  
   return getMemberById(memberId);
 }
 
