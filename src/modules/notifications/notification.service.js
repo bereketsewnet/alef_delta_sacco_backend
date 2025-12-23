@@ -166,6 +166,35 @@ export const NotificationHelpers = {
     );
   },
   
+  async loanRequestCreated(requestId, memberId, phone, amount) {
+    // Create notification for staff (not for member, as this is just a request)
+    // We'll notify staff via a system notification or dashboard
+    // For now, we'll skip member notification as this is just an initial request
+    return null;
+  },
+  
+  async loanRequestApproved(memberId, requestId, amount) {
+    if (!memberId) return null; // Can't notify if no member
+    return await createNotification(
+      memberId,
+      'LOAN_REQUEST_APPROVED',
+      'Loan Request Approved',
+      `Your loan request of ETB ${Number(amount).toLocaleString('en-ET', { minimumFractionDigits: 2 })} has been approved. Please visit our office to complete your loan application.`,
+      { request_id: requestId, amount }
+    );
+  },
+  
+  async loanRequestRejected(memberId, requestId, reason) {
+    if (!memberId) return null; // Can't notify if no member
+    return await createNotification(
+      memberId,
+      'LOAN_REQUEST_REJECTED',
+      'Loan Request Rejected',
+      `Your loan request has been rejected.${reason ? ` Reason: ${reason}` : ''}`,
+      { request_id: requestId, reason }
+    );
+  },
+  
   async depositRequestApproved(memberId, amount, accountId) {
     return await createNotification(
       memberId,
